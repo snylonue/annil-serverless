@@ -12,7 +12,9 @@ jobs:
       - name: Add secrets
         run: |
           # Generate Secrets file
-          echo 'token="${{ secrets.TOKEN }}"' >> Secrets.toml
+          echo "token='" >> Secrets.toml
+          echo '${{ secrets.TOKEN }}' >> Secrets.toml
+          echo "'" >> Secrets.toml
       - uses: kaleidawave/shuttle-deploy-action@patch-1
         with:
           deploy-key: ${{ secrets.SHUTTLE_DEPLOY_KEY }}
