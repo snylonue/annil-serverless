@@ -17,10 +17,8 @@ use axum::{
     body::{Empty, StreamBody},
     extract::Path,
     http::{
-        header::{
-            ACCESS_CONTROL_EXPOSE_HEADERS, AUTHORIZATION,
-            CONTENT_LENGTH, CONTENT_TYPE,
-        }, Method, StatusCode,
+        header::{ACCESS_CONTROL_EXPOSE_HEADERS, CONTENT_LENGTH, CONTENT_TYPE},
+        Method, StatusCode,
     },
     response::{IntoResponse, Response},
     routing::get,
@@ -108,6 +106,14 @@ async fn audio_head(
     Ok(response)
 }
 
+async fn cover(
+    Extension(state): Extension<Arc<State>>,
+    Path((album_id, disc_id)): Path<(String, Option<NonZeroU8>)>,
+) -> Result<impl IntoResponse, AnniError> {
+    let cover = state.provider.get_cover(&album_id, disc_id).await?;
+    Ok(StreamBody::new(ReaderStream::new(cover)))
+}
+
 #[shuttle_service::main]
 async fn axum() -> shuttle_service::ShuttleAxum {
     let state = Arc::new(State {
@@ -137,6 +143,13 @@ async fn axum() -> shuttle_service::ShuttleAxum {
     let router = Router::new()
         .route("/info", get(info))
         .route("/albums", get(albums))
+        .route(
+            "/:album/cover",
+            get(|extension, Path(album_id): Path<String>| async {
+                cover(extension, Path((album_id, NonZeroU8::new(1)))).await
+            }),
+        )
+        .route("/:album/:disc/cover", get(cover))
         .route("/:album/:disc/:track", get(audio).head(audio_head))
         .layer(
             tower_http::cors::CorsLayer::new()
