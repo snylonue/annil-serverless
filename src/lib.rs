@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroU8,
     path::PathBuf,
     str::FromStr,
     sync::Arc,
@@ -10,10 +11,24 @@ use anni_provider::{
         drive::{DriveAuth, DriveProviderSettings},
         DriveProvider,
     },
-    AnniProvider, ProviderError,
+    AnniProvider, ProviderError, Range,
 };
-use axum::{http::StatusCode, response::IntoResponse, routing::get, Extension, Json, Router};
+use axum::{
+    body::{Empty, StreamBody},
+    extract::Path,
+    http::{
+        header::{
+            ACCESS_CONTROL_EXPOSE_HEADERS, AUTHORIZATION,
+            CONTENT_LENGTH, CONTENT_TYPE,
+        }, Method, StatusCode,
+    },
+    response::{IntoResponse, Response},
+    routing::get,
+    Extension, Json, Router,
+};
 use sync_wrapper::SyncWrapper;
+use tokio_util::io::ReaderStream;
+use tower_http::cors::Any;
 
 #[derive(Debug, serde::Serialize)]
 struct AnnilInfo {
@@ -58,6 +73,41 @@ async fn albums(Extension(state): Extension<Arc<State>>) -> Result<Json<Vec<Stri
     Ok(Json(alb.into_iter().map(|s| s.to_string()).collect()))
 }
 
+async fn audio(
+    Extension(state): Extension<Arc<State>>,
+    Path((album_id, disc_id, track_id)): Path<(String, NonZeroU8, NonZeroU8)>,
+) -> Result<impl IntoResponse, AnniError> {
+    let audio = state
+        .provider
+        .get_audio(&album_id, disc_id, track_id, Range::FULL)
+        .await?;
+    Ok(StreamBody::new(ReaderStream::new(audio.reader)))
+}
+
+async fn audio_head(
+    Extension(state): Extension<Arc<State>>,
+    Path((album_id, disc_id, track_id)): Path<(String, NonZeroU8, NonZeroU8)>,
+) -> Result<impl IntoResponse, AnniError> {
+    let info = state
+        .provider
+        .get_audio_info(&album_id, disc_id, track_id)
+        .await?;
+    let response = Response::builder()
+        .status(200)
+        .header("X-Origin-Type", format!("audio/{}", info.extension))
+        .header("X-Origin-Size", info.size)
+        .header("X-Audio-Quality", "lossless")
+        .header(
+            ACCESS_CONTROL_EXPOSE_HEADERS,
+            "X-Origin-Type, X-Origin-Size, X-Duration-Seconds, X-Audio-Quality",
+        )
+        .header(CONTENT_LENGTH, info.size)
+        .header(CONTENT_TYPE, format!("audio/{}", info.extension))
+        .body(Empty::new())
+        .unwrap();
+    Ok(response)
+}
+
 #[shuttle_service::main]
 async fn axum() -> shuttle_service::ShuttleAxum {
     let state = Arc::new(State {
@@ -87,6 +137,13 @@ async fn axum() -> shuttle_service::ShuttleAxum {
     let router = Router::new()
         .route("/info", get(info))
         .route("/albums", get(albums))
+        .route("/:album/:disc/:track", get(audio).head(audio_head))
+        .layer(
+            tower_http::cors::CorsLayer::new()
+                .allow_methods([Method::GET, Method::OPTIONS])
+                .allow_headers(Any)
+                .allow_origin(Any),
+        )
         .layer(Extension(state));
     let sync_wrapper = SyncWrapper::new(router);
 

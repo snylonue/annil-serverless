@@ -13,7 +13,10 @@ serde = { version = "1.0", features = ["derive"] }
 sync_wrapper = "0.1.1"
 # anni-provider = { git = "https://github.com/ProjectAnni/anni.git", package = "anni-provider" }
 anni-provider = { path = "../anni/anni-provider" }
+uuid = { version = "1", features = ["serde"]}
+tokio-util = { version = "0.6.10", features = ["compat", "io"] }
+tower-http = { version = "0.3", features = ["cors"]}
 
 [patch.crates-io]
 rusqlite = { git = "https://github.com/ProjectAnni/rusqlite", branch = "wasm32-unknown-unknown" }
-shuttle-service = { git = "https://github.com/snylonue/shuttle.git", branch = "tokio-dep" }
+# shuttle-service = { git = "https://github.com/snylonue/shuttle.git", branch = "tokio-dep" }
