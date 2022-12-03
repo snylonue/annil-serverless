@@ -8,12 +8,13 @@ use std::{
 
 use anni_provider::{
     providers::{
-        drive::{DriveAuth, DriveProviderSettings},
+        drive::{oauth2, DriveAuth, DriveProviderSettings},
         DriveProvider,
     },
     AnniProvider, ProviderError, Range,
 };
 use axum::{
+    async_trait,
     body::{Empty, StreamBody},
     extract::Path,
     http::{
@@ -24,6 +25,8 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
+use shuttle_persist::PersistInstance;
+use shuttle_secrets::SecretStore;
 use sync_wrapper::SyncWrapper;
 use tokio_util::io::ReaderStream;
 use tower_http::cors::Any;
@@ -33,6 +36,22 @@ struct AnnilInfo {
     version: String,
     protocol_version: String,
     last_update: u64,
+}
+
+struct TokenStorage {
+    persist: PersistInstance,
+}
+
+#[async_trait]
+impl oauth2::storage::TokenStorage for TokenStorage {
+    async fn set(&self, _: &[&str], token: oauth2::storage::TokenInfo) -> anyhow::Result<()> {
+        Ok(self.persist.save("token", token)?)
+    }
+
+    /// Retrieve a token stored by set for the given set of scopes
+    async fn get(&self, _: &[&str]) -> Option<oauth2::storage::TokenInfo> {
+        self.persist.load("token").ok()
+    }
 }
 
 struct State {
@@ -115,7 +134,19 @@ async fn cover(
 }
 
 #[shuttle_service::main]
-async fn axum() -> shuttle_service::ShuttleAxum {
+async fn axum(
+    #[shuttle_persist::Persist] persist: PersistInstance,
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
+) -> shuttle_service::ShuttleAxum {
+    let storage = TokenStorage { persist };
+    match storage.persist.load::<oauth2::storage::TokenInfo>("token") {
+        _ => {}
+        Err(_) => {
+            let token = secret_store.get("token").unwrap();
+            let ti: oauth2::storage::TokenInfo = serde_json::from_str(&token).unwrap();
+            storage.persist.save("token", ti).unwrap();
+        }
+    }
     let state = Arc::new(State {
         provider: DriveProvider::new(
             DriveAuth::InstalledFlow {
@@ -130,6 +161,7 @@ async fn axum() -> shuttle_service::ShuttleAxum {
                 drive_id: None,
                 token_path: PathBuf::from_str(r"D:\files\code\annil_serverless\token").unwrap(),
             },
+            Box::new(storage),
             None,
         )
         .await

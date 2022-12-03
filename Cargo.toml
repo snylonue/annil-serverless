@@ -16,6 +16,10 @@ anni-provider = { path = "../anni/anni-provider" }
 uuid = { version = "1", features = ["serde"]}
 tokio-util = { version = "0.6.10", features = ["compat", "io"] }
 tower-http = { version = "0.3", features = ["cors"]}
+shuttle-persist = "0.7.2"
+shuttle-secrets = "0.7.2"
+anyhow = "1.0.66"
+serde_json = "1.0.89"
 
 [patch.crates-io]
 rusqlite = { git = "https://github.com/ProjectAnni/rusqlite", branch = "wasm32-unknown-unknown" }

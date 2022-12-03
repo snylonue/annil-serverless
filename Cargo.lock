@@ -128,8 +128,12 @@ name = "annil_serverless"
 version = "0.1.0"
 dependencies = [
  "anni-provider",
+ "anyhow",
  "axum",
  "serde",
+ "serde_json",
+ "shuttle-persist",
+ "shuttle-secrets",
  "shuttle-service",
  "sync_wrapper",
  "tokio-util 0.6.10",
@@ -212,6 +216,15 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bit_field"
@@ -356,6 +369,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "comfy-table"
+version = "6.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e621e7e86c46fd8a14c32c6ae3cb95656621b4743a27d0cffedb831d46e7ad21"
+dependencies = [
+ "crossterm",
+ "strum",
+ "strum_macros",
+ "unicode-width",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -430,6 +455,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb766fa798726286dbbb842f174001dab8abc7b627a1dd86e0b7222a95d929f"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "crossterm"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e64e6c0fbe2c17357405f7c758c1ef960fce08bdfb2c03d88d2a18d7e09c4b67"
+dependencies = [
+ "bitflags",
+ "crossterm_winapi",
+ "libc",
+ "mio",
+ "parking_lot",
+ "signal-hook",
+ "signal-hook-mio",
+ "winapi",
+]
+
+[[package]]
+name = "crossterm_winapi"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ae1b35a484aa10e07fe0638d02301c5ad24de82d310ccbd2f3693da5f09bf1c"
+dependencies = [
+ "winapi",
 ]
 
 [[package]]
@@ -2054,12 +2104,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d36f19a44016403cfab72c21130c3d39f16e773618ee2b1f2bb5633ec7e324e9"
 dependencies = [
  "chrono",
+ "comfy-table",
+ "crossterm",
+ "http",
  "once_cell",
  "rustrict",
  "serde",
+ "serde_json",
  "strum",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "shuttle-persist"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "226ee9de4b26a7c9687ab83b56ac470633a20ad9a23af36104a4f3f1eab91440"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "serde",
+ "shuttle-common",
+ "shuttle-service",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "shuttle-secrets"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffa96fd0fb589531d4c8abe434ab8e61acc5cef6ee520dc5627a34ad14a03f31"
+dependencies = [
+ "async-trait",
+ "shuttle-service",
+ "tokio",
 ]
 
 [[package]]
@@ -2085,6 +2165,27 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "signal-hook"
+version = "0.3.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a253b5e89e2698464fc26b545c9edceb338e18a89effeeecfea192c3025be29d"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
+name = "signal-hook-mio"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29ad2e15f37ec9a6cc544097b78a1ec90001e9f71b81338ca39f430adaca99af"
+dependencies = [
+ "libc",
+ "mio",
+ "signal-hook",
 ]
 
 [[package]]
