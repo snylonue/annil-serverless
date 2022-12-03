@@ -140,7 +140,7 @@ async fn axum(
 ) -> shuttle_service::ShuttleAxum {
     let storage = TokenStorage { persist };
     match storage.persist.load::<oauth2::storage::TokenInfo>("token") {
-        _ => {}
+        Ok(_) => {}
         Err(_) => {
             let token = secret_store.get("token").unwrap();
             let ti: oauth2::storage::TokenInfo = serde_json::from_str(&token).unwrap();
