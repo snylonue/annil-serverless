@@ -1,3 +1,5 @@
+pub use anni_provider_drive_token_storage as anni_provider;
+
 use std::{
     num::NonZeroU8,
     path::PathBuf,
@@ -159,7 +161,7 @@ async fn axum(
             DriveProviderSettings {
                 corpora: String::from("user"),
                 drive_id: None,
-                token_path: PathBuf::from_str(r"D:\files\code\annil_serverless\token").unwrap(),
+                token_path: PathBuf::from_str(r"./token").unwrap(),
             },
             Box::new(storage),
             None,

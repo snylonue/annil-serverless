@@ -40,16 +40,19 @@ dependencies = [
 [[package]]
 name = "anni-artist"
 version = "0.1.0"
-source = "git+https://github.com/ProjectAnni/anni-artist#b16b6d03a0ed396a7f661e642043403f46d5e2d8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dac7bcc4399327bfdf09dc3ff5718b0140d219698de509381cc907584a0e83c9"
 
 [[package]]
 name = "anni-common"
 version = "0.1.1"
-source = "git+https://github.com/snylonue/anni.git?branch=serverless#5fa116b131ddc2aa0dd85f34b4c2f4b9e8eb54eb"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b356cec7c64acb105fc46ff483e7e6df008e00264b69f0dd9de0f351033ddaa"
 dependencies = [
  "anni-artist",
  "byteorder",
  "chardetng",
+ "encoding_rs",
  "log 0.4.17",
  "once_cell",
  "path-absolutize",
@@ -63,7 +66,8 @@ dependencies = [
 [[package]]
 name = "anni-flac"
 version = "0.2.2"
-source = "git+https://github.com/snylonue/anni.git?branch=serverless#5fa116b131ddc2aa0dd85f34b4c2f4b9e8eb54eb"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0492af056dbc029f697067d5c55d60f8e8803a70c38c1bfead1b6a4b5c331fb9"
 dependencies = [
  "async-trait",
  "byteorder",
@@ -77,16 +81,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "anni-provider"
+name = "anni-google-drive3"
+version = "0.1.0+4.0.0-20220225"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "164ffca36038f766a0b50f9b2fdb7e8156727da74355187012c389658509c4e5"
+dependencies = [
+ "http",
+ "hyper",
+ "hyper-rustls",
+ "itertools",
+ "mime 0.2.6",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tokio",
+ "tower-service",
+ "url 1.7.2",
+ "yup-oauth2",
+]
+
+[[package]]
+name = "anni-provider-drive-token-storage"
 version = "0.1.1"
-source = "git+https://github.com/snylonue/anni.git?branch=serverless#5fa116b131ddc2aa0dd85f34b4c2f4b9e8eb54eb"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5762041284c78c2f5b7b114e43e9661ff6b66e90fa5306fba46b5c2667f3bcaf"
 dependencies = [
  "anni-flac",
+ "anni-google-drive3",
  "anni-repo",
  "async-trait",
  "dashmap",
  "futures",
- "google-drive3",
  "hex",
  "hyper-proxy",
  "log 0.4.17",
@@ -97,41 +122,37 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
- "tokio-util 0.6.10",
+ "tokio-util 0.7.3",
  "uuid",
 ]
 
 [[package]]
 name = "anni-repo"
-version = "0.1.0"
-source = "git+https://github.com/snylonue/anni.git?branch=serverless#5fa116b131ddc2aa0dd85f34b4c2f4b9e8eb54eb"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5a0a9bc41540e1e3504e541ca97b24b9c0066819aef595c7feb29ffb3d07d4"
 dependencies = [
  "anni-common",
- "getrandom",
  "indexmap",
- "js-sys",
  "log 0.4.17",
  "once_cell",
  "pathdiff",
  "regex",
  "rusqlite",
  "serde",
- "serde-wasm-bindgen",
  "serde_json",
  "serde_rusqlite",
  "serde_with",
- "sqlite-vfs",
  "thiserror",
  "toml_edit",
  "uuid",
- "wasm-bindgen",
 ]
 
 [[package]]
 name = "annil_serverless"
 version = "0.1.0"
 dependencies = [
- "anni-provider",
+ "anni-provider-drive-token-storage",
  "anyhow",
  "axum",
  "serde",
@@ -837,25 +858,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "google-drive3"
-version = "4.0.0+20220225"
-source = "git+https://github.com/snylonue/anni.git?branch=serverless#5fa116b131ddc2aa0dd85f34b4c2f4b9e8eb54eb"
-dependencies = [
- "http",
- "hyper",
- "hyper-rustls",
- "itertools",
- "mime 0.2.6",
- "serde",
- "serde_derive",
- "serde_json",
- "tokio",
- "tower-service",
- "url 1.7.2",
- "yup-oauth2",
-]
-
-[[package]]
 name = "h2"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1205,12 +1207,11 @@ checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.24.2"
-source = "git+https://github.com/ProjectAnni/rusqlite?branch=wasm32-unknown-unknown#24a6a3a0fb2761bb721beda3f2357f6982a52c4d"
+version = "0.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29f835d03d717946d28b1d1ed632eb6f0e24a299388ee623d0c23118d3e8a7fa"
 dependencies = [
  "cc",
- "getrandom",
- "js-sys",
  "pkg-config",
  "vcpkg",
 ]
@@ -1606,12 +1607,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ppv-lite86"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
-
-[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1651,36 +1646,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbe448f377a7d6961e30f5955f9b8d106c3f5e449d493ee1b125c1d43c2b5179"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "rand"
-version = "0.8.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
-dependencies = [
- "libc",
- "rand_chacha",
- "rand_core",
-]
-
-[[package]]
-name = "rand_chacha"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
-dependencies = [
- "ppv-lite86",
- "rand_core",
-]
-
-[[package]]
-name = "rand_core"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-dependencies = [
- "getrandom",
 ]
 
 [[package]]
@@ -1807,15 +1772,15 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.27.0"
-source = "git+https://github.com/ProjectAnni/rusqlite?branch=wasm32-unknown-unknown#24a6a3a0fb2761bb721beda3f2357f6982a52c4d"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01e213bc3ecb39ac32e81e51ebe31fd888a940515173e3a18a35f8c6e896422a"
 dependencies = [
  "bitflags",
  "fallible-iterator",
  "fallible-streaming-iterator",
  "hashlink",
  "libsqlite3-sys",
- "memchr",
  "serde_json",
  "smallvec",
  "uuid",
@@ -1983,17 +1948,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3b4c031cd0d9014307d82b8abf653c0290fbdaeb4c02d00c63cf52f728628bf"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.148"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2017,9 +1971,9 @@ dependencies = [
 
 [[package]]
 name = "serde_rusqlite"
-version = "0.30.1"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e73509831d054bb2d2a69e3457ad7c417a5820bab80a70676182148e29a503ed"
+checksum = "538b51f10ee271375cbd9caa04fa6e3e50af431a21db97caae48da92a074244a"
 dependencies = [
  "rusqlite",
  "serde",
@@ -2243,18 +2197,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlite-vfs"
-version = "0.1.0"
-source = "git+https://github.com/ProjectAnni/sqlite-vfs#cdcb7e86814375f56eafd3da693e2107f5c3f890"
-dependencies = [
- "getrandom",
- "libsqlite3-sys",
- "log 0.4.17",
- "rand",
- "time 0.3.17",
-]
-
-[[package]]
 name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2438,9 +2380,7 @@ dependencies = [
  "mio",
  "num_cpus",
  "once_cell",
- "parking_lot",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "winapi",
@@ -2512,6 +2452,7 @@ checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
 dependencies = [
  "bytes",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "pin-project-lite",
  "tokio",
@@ -2770,8 +2711,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaf9f5aceeec8be17c128b2e93e031fb8a4d469bb9c4ae2d7dc1888b26887268"
 dependencies = [
  "cfg-if",
- "serde",
- "serde_json",
  "wasm-bindgen-macro",
 ]
 
@@ -3032,3 +2971,8 @@ dependencies = [
  "tower-service",
  "url 2.3.1",
 ]
+
+[[patch.unused]]
+name = "rusqlite"
+version = "0.27.0"
+source = "git+https://github.com/ProjectAnni/rusqlite?branch=wasm32-unknown-unknown#24a6a3a0fb2761bb721beda3f2357f6982a52c4d"
