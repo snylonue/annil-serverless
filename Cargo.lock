@@ -103,8 +103,6 @@ dependencies = [
 [[package]]
 name = "anni-provider-drive-token-storage"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5762041284c78c2f5b7b114e43e9661ff6b66e90fa5306fba46b5c2667f3bcaf"
 dependencies = [
  "anni-flac",
  "anni-google-drive3",
