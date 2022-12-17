@@ -24,4 +24,5 @@ serde_json = "1.0.89"
 
 [patch.crates-io]
 rusqlite = { git = "https://github.com/ProjectAnni/rusqlite", branch = "wasm32-unknown-unknown" }
+dashmap = { git = "https://github.com/snylonue/dashmap", branch = "no-toolchain" }
 # shuttle-service = { git = "https://github.com/snylonue/shuttle.git", branch = "tokio-dep" }
