@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 shuttle-service = { version = "0.8", features = ["web-axum"] }
-axum = { version = "0.5.17", features = ["json"] }
+axum = { version = "0.6", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 sync_wrapper = "0.1.1"
 # anni-provider = "0.1"
