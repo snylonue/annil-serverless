@@ -1,3 +1,4 @@
 /target
 token
 Secrets.toml
+/shuttle_persist

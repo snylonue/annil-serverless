@@ -24,12 +24,13 @@ use axum::{
         Method, StatusCode,
     },
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Extension, Json, Router,
 };
 use shuttle_persist::PersistInstance;
 use shuttle_secrets::SecretStore;
 use sync_wrapper::SyncWrapper;
+use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 use tower_http::cors::Any;
 
@@ -78,25 +79,28 @@ impl IntoResponse for AnniError {
     }
 }
 
-async fn info(Extension(state): Extension<Arc<State>>) -> Json<AnnilInfo> {
-    // returns a last_update that is hard-encoded
+async fn info(Extension(state): Extension<Arc<RwLock<State>>>) -> Json<AnnilInfo> {
     Json(AnnilInfo {
         version: String::from("AnnilServerless v0.1.0"),
         protocol_version: String::from("0.4.1"),
-        last_update: state.last_update,
+        last_update: state.read().await.last_update,
     })
 }
 
-async fn albums(Extension(state): Extension<Arc<State>>) -> Result<Json<Vec<String>>, AnniError> {
-    let alb = state.provider.albums().await?;
+async fn albums(
+    Extension(state): Extension<Arc<RwLock<State>>>,
+) -> Result<Json<Vec<String>>, AnniError> {
+    let s = state.read().await;
+    let alb = s.provider.albums().await?;
     Ok(Json(alb.into_iter().map(|s| s.to_string()).collect()))
 }
 
 async fn audio(
-    Extension(state): Extension<Arc<State>>,
+    Extension(state): Extension<Arc<RwLock<State>>>,
     Path((album_id, disc_id, track_id)): Path<(String, NonZeroU8, NonZeroU8)>,
 ) -> Result<impl IntoResponse, AnniError> {
-    let audio = state
+    let s = state.read().await;
+    let audio = s
         .provider
         .get_audio(&album_id, disc_id, track_id, Range::FULL)
         .await?;
@@ -104,10 +108,11 @@ async fn audio(
 }
 
 async fn audio_head(
-    Extension(state): Extension<Arc<State>>,
+    Extension(state): Extension<Arc<RwLock<State>>>,
     Path((album_id, disc_id, track_id)): Path<(String, NonZeroU8, NonZeroU8)>,
 ) -> Result<impl IntoResponse, AnniError> {
-    let info = state
+    let s = state.read().await;
+    let info = s
         .provider
         .get_audio_info(&album_id, disc_id, track_id)
         .await?;
@@ -128,11 +133,22 @@ async fn audio_head(
 }
 
 async fn cover(
-    Extension(state): Extension<Arc<State>>,
+    Extension(state): Extension<Arc<RwLock<State>>>,
     Path((album_id, disc_id)): Path<(String, Option<NonZeroU8>)>,
 ) -> Result<impl IntoResponse, AnniError> {
-    let cover = state.provider.get_cover(&album_id, disc_id).await?;
+    let s = state.read().await;
+    let cover = s.provider.get_cover(&album_id, disc_id).await?;
     Ok(StreamBody::new(ReaderStream::new(cover)))
+}
+
+async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), AnniError> {
+    let mut s = state.write().await;
+    s.provider.reload().await?;
+    s.last_update = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    Ok(())
 }
 
 #[shuttle_service::main]
@@ -149,7 +165,7 @@ async fn axum(
             storage.persist.save("token", ti).unwrap();
         }
     }
-    let state = Arc::new(State {
+    let state = RwLock::new(State {
         provider: DriveProvider::new(
             DriveAuth::InstalledFlow {
                 client_id: String::from(
@@ -185,13 +201,14 @@ async fn axum(
         )
         .route("/:album/:disc/cover", get(cover))
         .route("/:album/:disc/:track", get(audio).head(audio_head))
+        .route("/admin/reload", post(reload))
         .layer(
             tower_http::cors::CorsLayer::new()
                 .allow_methods([Method::GET, Method::OPTIONS])
                 .allow_headers(Any)
                 .allow_origin(Any),
         )
-        .layer(Extension(state));
+        .layer(Extension(Arc::new(state)));
     let sync_wrapper = SyncWrapper::new(router);
 
     Ok(sync_wrapper)
