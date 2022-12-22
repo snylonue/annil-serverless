@@ -10,7 +10,10 @@ use std::{
 
 use anni_provider::{
     providers::{
-        drive::{oauth2, DriveAuth, DriveProviderSettings},
+        drive::{
+            oauth2::{self, storage::TokenInfo},
+            DriveAuth, DriveProviderSettings,
+        },
         DriveProvider,
     },
     AnniProvider, ProviderError, Range,
@@ -157,12 +160,24 @@ async fn axum(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> shuttle_service::ShuttleAxum {
     let storage = TokenStorage { persist };
+    let initial_token: Option<TokenInfo> = secret_store
+        .get("token")
+        .map(|token| serde_json::from_str(&token).unwrap());
     match storage.persist.load::<oauth2::storage::TokenInfo>("token") {
-        Ok(_) => {}
+        Ok(token) => match initial_token {
+            Some(init) if init.expires_at > token.expires_at => {
+                storage.persist.save("token", init).unwrap()
+            }
+            _ => {}
+        },
         Err(_) => {
-            let token = secret_store.get("token").unwrap();
-            let ti: oauth2::storage::TokenInfo = serde_json::from_str(&token).unwrap();
-            storage.persist.save("token", ti).unwrap();
+            storage
+                .persist
+                .save(
+                    "token",
+                    initial_token.expect("failed to load initial token"),
+                )
+                .unwrap();
         }
     }
     let state = RwLock::new(State {
