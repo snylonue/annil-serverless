@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
     str::FromStr,
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH}, collections::HashMap,
 };
 
 use anni_provider::{
@@ -21,7 +21,7 @@ use anni_provider::{
 use axum::{
     async_trait,
     body::{Empty, StreamBody},
-    extract::Path,
+    extract::{Path, Query},
     http::{
         header::{ACCESS_CONTROL_EXPOSE_HEADERS, CONTENT_LENGTH, CONTENT_TYPE},
         Method, StatusCode,
@@ -61,8 +61,19 @@ impl oauth2::storage::TokenStorage for TokenStorage {
 }
 
 struct State {
-    provider: DriveProvider,
+    provider: Option<DriveProvider>,
     last_update: u64,
+    persist: Option<PersistInstance>
+}
+
+impl State {
+    fn provider(&self) -> &DriveProvider {
+        self.provider.as_ref().unwrap()
+    }
+
+    fn provider_mut(&mut self) -> &mut DriveProvider {
+        self.provider.as_mut().unwrap()
+    }
 }
 
 #[derive(Debug)]
@@ -94,7 +105,7 @@ async fn albums(
     Extension(state): Extension<Arc<RwLock<State>>>,
 ) -> Result<Json<Vec<String>>, AnniError> {
     let s = state.read().await;
-    let alb = s.provider.albums().await?;
+    let alb = s.provider().albums().await?;
     Ok(Json(alb.into_iter().map(|s| s.to_string()).collect()))
 }
 
@@ -104,7 +115,7 @@ async fn audio(
 ) -> Result<impl IntoResponse, AnniError> {
     let s = state.read().await;
     let audio = s
-        .provider
+        .provider()
         .get_audio(&album_id, disc_id, track_id, Range::FULL)
         .await?;
     Ok(StreamBody::new(ReaderStream::new(audio.reader)))
@@ -116,7 +127,7 @@ async fn audio_head(
 ) -> Result<impl IntoResponse, AnniError> {
     let s = state.read().await;
     let info = s
-        .provider
+        .provider()
         .get_audio_info(&album_id, disc_id, track_id)
         .await?;
     let response = Response::builder()
@@ -140,13 +151,13 @@ async fn cover(
     Path((album_id, disc_id)): Path<(String, Option<NonZeroU8>)>,
 ) -> Result<impl IntoResponse, AnniError> {
     let s = state.read().await;
-    let cover = s.provider.get_cover(&album_id, disc_id).await?;
+    let cover = s.provider().get_cover(&album_id, disc_id).await?;
     Ok(StreamBody::new(ReaderStream::new(cover)))
 }
 
 async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), AnniError> {
     let mut s = state.write().await;
-    s.provider.reload().await?;
+    s.provider_mut().reload().await?;
     s.last_update = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -154,25 +165,50 @@ async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), A
     Ok(())
 }
 
+async fn init(Extension(state): Extension<Arc<RwLock<State>>>, Query(q): Query<HashMap<String, String>>) -> Result<String, AnniError> {
+    let token: TokenInfo = serde_json::from_str(q.get("token").unwrap()).unwrap();
+    let mut s = state.write().await;
+    let storage = TokenStorage { persist: s.persist.take().unwrap() };
+    storage.persist.save("token", token).unwrap();
+    let provider = DriveProvider::new(
+        DriveAuth::InstalledFlow {
+            client_id: String::from(
+                "453004067441-3vj45hga37etmmuhjplucfeqgehu7a93.apps.googleusercontent.com",
+            ),
+            client_secret: String::from("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"),
+            project_id: Some(String::from("annil_serverless")),
+        },
+        DriveProviderSettings {
+            corpora: String::from("user"),
+            drive_id: None,
+            token_path: PathBuf::from_str(r"./token").unwrap(),
+        },
+        Box::new(storage),
+        None,
+    )
+    .await?;
+    s.provider.replace(provider);
+    Ok(String::from("inited"))
+}
+
 #[shuttle_service::main]
 async fn axum(
     #[shuttle_persist::Persist] persist: PersistInstance,
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> shuttle_service::ShuttleAxum {
-    let storage = TokenStorage { persist };
+    // let storage = TokenStorage { persist };
     let initial_token: Option<TokenInfo> = secret_store
         .get("token")
         .map(|token| serde_json::from_str(&token).unwrap());
-    match storage.persist.load::<oauth2::storage::TokenInfo>("token") {
+    match persist.load::<oauth2::storage::TokenInfo>("token") {
         Ok(token) => match initial_token {
             Some(init) if init.expires_at > token.expires_at => {
-                storage.persist.save("token", init).unwrap()
+                persist.save("token", init).unwrap()
             }
             _ => {}
         },
         Err(_) => {
-            storage
-                .persist
+                persist
                 .save(
                     "token",
                     initial_token.expect("failed to load initial token"),
@@ -181,28 +217,12 @@ async fn axum(
         }
     }
     let state = RwLock::new(State {
-        provider: DriveProvider::new(
-            DriveAuth::InstalledFlow {
-                client_id: String::from(
-                    "453004067441-3vj45hga37etmmuhjplucfeqgehu7a93.apps.googleusercontent.com",
-                ),
-                client_secret: String::from("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"),
-                project_id: Some(String::from("annil_serverless")),
-            },
-            DriveProviderSettings {
-                corpora: String::from("user"),
-                drive_id: None,
-                token_path: PathBuf::from_str(r"./token").unwrap(),
-            },
-            Box::new(storage),
-            None,
-        )
-        .await
-        .unwrap(),
+        provider: None,
         last_update: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs(),
+        persist: Some(persist)
     });
 
     let router = Router::new()
@@ -217,9 +237,10 @@ async fn axum(
         .route("/:album/:disc/cover", get(cover))
         .route("/:album/:disc/:track", get(audio).head(audio_head))
         .route("/admin/reload", post(reload))
+        .route("/admin/init", get(init))
         .layer(
             tower_http::cors::CorsLayer::new()
-                .allow_methods([Method::GET, Method::OPTIONS])
+                .allow_methods([Method::GET, Method::OPTIONS, Method::POST])
                 .allow_headers(Any)
                 .allow_origin(Any),
         )
