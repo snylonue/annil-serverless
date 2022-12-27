@@ -45,7 +45,7 @@ struct AnnilInfo {
 }
 
 struct TokenStorage {
-    persist: PersistInstance,
+    persist: Arc<PersistInstance>,
 }
 
 #[async_trait]
@@ -63,7 +63,7 @@ impl oauth2::storage::TokenStorage for TokenStorage {
 struct State {
     provider: Option<DriveProvider>,
     last_update: u64,
-    persist: Option<PersistInstance>
+    persist: Arc<PersistInstance>
 }
 
 impl State {
@@ -95,7 +95,7 @@ impl IntoResponse for AnniError {
 
 async fn info(Extension(state): Extension<Arc<RwLock<State>>>) -> Json<AnnilInfo> {
     Json(AnnilInfo {
-        version: String::from("AnnilServerless v0.1.0"),
+        version: String::from("AnnilServerless v0.2.0"),
         protocol_version: String::from("0.4.1"),
         last_update: state.read().await.last_update,
     })
@@ -165,10 +165,10 @@ async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), A
     Ok(())
 }
 
-async fn init(Extension(state): Extension<Arc<RwLock<State>>>, Query(q): Query<HashMap<String, String>>) -> Result<String, AnniError> {
+async fn update_token(Extension(state): Extension<Arc<RwLock<State>>>, Query(q): Query<HashMap<String, String>>) -> Result<&'static str, AnniError> {
     let token: TokenInfo = serde_json::from_str(q.get("token").unwrap()).unwrap();
     let mut s = state.write().await;
-    let storage = TokenStorage { persist: s.persist.take().unwrap() };
+    let storage = TokenStorage { persist: s.persist.clone() };
     storage.persist.save("token", token).unwrap();
     let provider = DriveProvider::new(
         DriveAuth::InstalledFlow {
@@ -188,7 +188,7 @@ async fn init(Extension(state): Extension<Arc<RwLock<State>>>, Query(q): Query<H
     )
     .await?;
     s.provider.replace(provider);
-    Ok(String::from("inited"))
+    Ok("token updated")
 }
 
 #[shuttle_service::main]
@@ -216,13 +216,31 @@ async fn axum(
                 .unwrap();
         }
     }
+    let persist = Arc::new(persist);
     let state = RwLock::new(State {
-        provider: None,
+        provider: DriveProvider::new(
+            DriveAuth::InstalledFlow {
+                client_id: String::from(
+                    "453004067441-3vj45hga37etmmuhjplucfeqgehu7a93.apps.googleusercontent.com",
+                ),
+                client_secret: String::from("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"),
+                project_id: Some(String::from("annil_serverless")),
+            },
+            DriveProviderSettings {
+                corpora: String::from("user"),
+                drive_id: None,
+                token_path: PathBuf::from_str(r"./token").unwrap(),
+            },
+            Box::new(TokenStorage { persist: persist.clone() }),
+            None,
+        )
+        .await
+        .ok(),
         last_update: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs(),
-        persist: Some(persist)
+        persist: persist.clone()
     });
 
     let router = Router::new()
@@ -237,7 +255,7 @@ async fn axum(
         .route("/:album/:disc/cover", get(cover))
         .route("/:album/:disc/:track", get(audio).head(audio_head))
         .route("/admin/reload", post(reload))
-        .route("/admin/init", get(init))
+        .route("/admin/update_token", get(update_token))
         .layer(
             tower_http::cors::CorsLayer::new()
                 .allow_methods([Method::GET, Method::OPTIONS, Method::POST])
