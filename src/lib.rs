@@ -67,29 +67,39 @@ struct State {
 }
 
 impl State {
-    fn provider(&self) -> &DriveProvider {
-        self.provider.as_ref().unwrap()
+    fn provider(&self) -> Result<&DriveProvider, Error> {
+        match self.provider.as_ref() {
+            Some(p) => Ok(p),
+            None => Err(Error::ServerError("not initialized"))
+        }
     }
 
-    fn provider_mut(&mut self) -> &mut DriveProvider {
-        self.provider.as_mut().unwrap()
+    fn provider_mut(&mut self) -> Result<&mut DriveProvider, Error> {
+        match self.provider.as_mut() {
+            Some(p) => Ok(p),
+            None => Err(Error::ServerError("not initialized"))
+        }
     }
 }
 
 #[derive(Debug)]
-struct AnniError {
-    error: ProviderError,
+enum Error {
+    AnniError(ProviderError),
+    ServerError(&'static str)
 }
 
-impl From<ProviderError> for AnniError {
+impl From<ProviderError> for Error {
     fn from(error: ProviderError) -> Self {
-        Self { error }
+        Self::AnniError(error)
     }
 }
 
-impl IntoResponse for AnniError {
+impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, self.error.to_string()).into_response()
+        match self {
+            Self::AnniError(error) => (StatusCode::NOT_FOUND, error.to_string()),
+            Self::ServerError(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+        }.into_response()
     }
 }
 
@@ -103,19 +113,19 @@ async fn info(Extension(state): Extension<Arc<RwLock<State>>>) -> Json<AnnilInfo
 
 async fn albums(
     Extension(state): Extension<Arc<RwLock<State>>>,
-) -> Result<Json<Vec<String>>, AnniError> {
+) -> Result<Json<Vec<String>>, Error> {
     let s = state.read().await;
-    let alb = s.provider().albums().await?;
+    let alb = s.provider()?.albums().await?;
     Ok(Json(alb.into_iter().map(|s| s.to_string()).collect()))
 }
 
 async fn audio(
     Extension(state): Extension<Arc<RwLock<State>>>,
     Path((album_id, disc_id, track_id)): Path<(String, NonZeroU8, NonZeroU8)>,
-) -> Result<impl IntoResponse, AnniError> {
+) -> Result<impl IntoResponse, Error> {
     let s = state.read().await;
     let audio = s
-        .provider()
+        .provider()?
         .get_audio(&album_id, disc_id, track_id, Range::FULL)
         .await?;
     Ok(StreamBody::new(ReaderStream::new(audio.reader)))
@@ -124,10 +134,10 @@ async fn audio(
 async fn audio_head(
     Extension(state): Extension<Arc<RwLock<State>>>,
     Path((album_id, disc_id, track_id)): Path<(String, NonZeroU8, NonZeroU8)>,
-) -> Result<impl IntoResponse, AnniError> {
+) -> Result<impl IntoResponse, Error> {
     let s = state.read().await;
     let info = s
-        .provider()
+        .provider()?
         .get_audio_info(&album_id, disc_id, track_id)
         .await?;
     let response = Response::builder()
@@ -149,15 +159,15 @@ async fn audio_head(
 async fn cover(
     Extension(state): Extension<Arc<RwLock<State>>>,
     Path((album_id, disc_id)): Path<(String, Option<NonZeroU8>)>,
-) -> Result<impl IntoResponse, AnniError> {
+) -> Result<impl IntoResponse, Error> {
     let s = state.read().await;
-    let cover = s.provider().get_cover(&album_id, disc_id).await?;
+    let cover = s.provider()?.get_cover(&album_id, disc_id).await?;
     Ok(StreamBody::new(ReaderStream::new(cover)))
 }
 
-async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), AnniError> {
+async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), Error> {
     let mut s = state.write().await;
-    s.provider_mut().reload().await?;
+    s.provider_mut()?.reload().await?;
     s.last_update = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -165,7 +175,7 @@ async fn reload(Extension(state): Extension<Arc<RwLock<State>>>) -> Result<(), A
     Ok(())
 }
 
-async fn update_token(Extension(state): Extension<Arc<RwLock<State>>>, Query(q): Query<HashMap<String, String>>) -> Result<&'static str, AnniError> {
+async fn update_token(Extension(state): Extension<Arc<RwLock<State>>>, Query(q): Query<HashMap<String, String>>) -> Result<&'static str, Error> {
     let token: TokenInfo = serde_json::from_str(q.get("token").unwrap()).unwrap();
     let mut s = state.write().await;
     let storage = TokenStorage { persist: s.persist.clone() };
