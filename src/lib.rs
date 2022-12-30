@@ -1,9 +1,5 @@
-pub use anni_provider_drive_token_storage as anni_provider;
-
 use std::{
     num::NonZeroU8,
-    path::PathBuf,
-    str::FromStr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH}, collections::HashMap,
 };
@@ -11,13 +7,13 @@ use std::{
 use anni_provider::{
     providers::{
         drive::{
-            oauth2::{self, storage::TokenInfo},
-            DriveAuth, DriveProviderSettings,
+            self, DriveAuth, DriveProviderSettings,
         },
         DriveProvider,
     },
     AnniProvider, ProviderError, Range,
 };
+use anni_google_drive3::oauth2::{self, storage::TokenInfo};
 use axum::{
     async_trait,
     body::{Empty, StreamBody},
@@ -191,10 +187,9 @@ async fn update_token(Extension(state): Extension<Arc<RwLock<State>>>, Query(q):
         DriveProviderSettings {
             corpora: String::from("user"),
             drive_id: None,
-            token_path: PathBuf::from_str(r"./token").unwrap(),
         },
-        Box::new(storage),
         None,
+        drive::TokenStorage::Custom(Box::new(storage)),
     )
     .await?;
     s.provider.replace(provider);
@@ -239,10 +234,9 @@ async fn axum(
             DriveProviderSettings {
                 corpora: String::from("user"),
                 drive_id: None,
-                token_path: PathBuf::from_str(r"./token").unwrap(),
             },
-            Box::new(TokenStorage { persist: persist.clone() }),
             None,
+            drive::TokenStorage::Custom(Box::new(TokenStorage { persist: persist.clone() })),
         )
         .await
         .ok(),
