@@ -11,13 +11,15 @@ shuttle-service = { version = "0.8", features = ["web-axum"] }
 axum = { version = "0.6", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 sync_wrapper = "0.1.1"
-# anni-provider = "0.1"
-anni-provider = { git = "https://github.com/ProjectAnni/anni.git", package = "anni-provider" }
+anni-provider = "0.1.2"
+annil = { version = "0.1", default-features = false }
+jwt-simple = "0.11"
 anni-google-drive3 = "0.1"
 uuid = { version = "1", features = ["serde"]}
 tokio = "1"
 tokio-util = { version = "0.6.10", features = ["compat", "io"] }
 tower-http = { version = "0.3", features = ["cors"]}
+tower = "0.4"
 shuttle-persist = "0.8"
 shuttle-secrets = "0.8"
 anyhow = "1.0.66"
