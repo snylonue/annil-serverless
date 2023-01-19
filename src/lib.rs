@@ -77,6 +77,7 @@ async fn axum(
                 .as_secs(),
         ),
         etag: RwLock::new(provider.compute_etag().await.unwrap()),
+        metadata: None
     });
 
     let key = Arc::new(AnnilKeys {
