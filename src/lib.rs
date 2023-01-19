@@ -90,13 +90,13 @@ async fn axum(
     let router = Router::new()
         .route("/info", get(annil::route::user::info))
         .route("/albums", get(annil::route::user::albums::<Provider>))
-        .route("/:album/cover", get(annil::route::user::cover::<Provider>))
+        .route("/:album_id/cover", get(annil::route::user::cover::<Provider>))
         .route(
-            "/:album/:disc/cover",
+            "/:album_id/:disc_id/cover",
             get(annil::route::user::cover::<Provider>),
         )
         .route(
-            "/:album/:disc/:track",
+            "/:album_id/:disc_id/:track_id",
             get(annil::route::user::audio::<Provider>)
                 .head(annil::route::user::audio_head::<Provider>),
         )
