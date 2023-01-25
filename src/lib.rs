@@ -5,8 +5,8 @@ use std::{
 
 use anni_provider::ProviderError;
 use anni_provider_od::{
-    onedrive_api::{DriveId, DriveLocation, OneDrive},
-    OneDriveProvider,
+    onedrive_api::{DriveId, DriveLocation},
+    OneDriveClient, OneDriveProvider,
 };
 use annil::{
     provider::AnnilProvider,
@@ -59,12 +59,17 @@ impl IntoResponse for Error {
 async fn axum(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> shuttle_service::ShuttleAxum {
-    let od = OneDrive::new(
-        secret_store.get("onedrive_key").unwrap(),
-        DriveLocation::from_id(DriveId(String::from(
-            "b!uyGkzZXn6UeUrlI00cEEwB0U-PTBJVNIkX2vruaA2Wsnkoejm3etQpoha4pffHk9",
-        ))),
-    );
+    let location = DriveLocation::from_id(DriveId(String::from(
+        "b!uyGkzZXn6UeUrlI00cEEwB0U-PTBJVNIkX2vruaA2Wsnkoejm3etQpoha4pffHk9",
+    )));
+    let od = OneDriveClient::new(
+        secret_store.get("od_refresh_token").unwrap(),
+        secret_store.get("od_client_id").unwrap(),
+        secret_store.get("od_client_secret").unwrap(),
+        location,
+    )
+    .await
+    .unwrap();
 
     let provider = Arc::new(AnnilProvider::new(Provider::new(od).await.unwrap()));
 
@@ -77,7 +82,7 @@ async fn axum(
                 .as_secs(),
         ),
         etag: RwLock::new(provider.compute_etag().await.unwrap()),
-        metadata: None
+        metadata: None,
     });
 
     let key = Arc::new(AnnilKeys {
@@ -90,7 +95,10 @@ async fn axum(
     let router = Router::new()
         .route("/info", get(annil::route::user::info))
         .route("/albums", get(annil::route::user::albums::<Provider>))
-        .route("/:album_id/cover", get(annil::route::user::cover::<Provider>))
+        .route(
+            "/:album_id/cover",
+            get(annil::route::user::cover::<Provider>),
+        )
         .route(
             "/:album_id/:disc_id/cover",
             get(annil::route::user::cover::<Provider>),

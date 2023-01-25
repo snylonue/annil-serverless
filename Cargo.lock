@@ -153,7 +153,7 @@ dependencies = [
 [[package]]
 name = "anni-provider-od"
 version = "0.1.0"
-source = "git+https://github.com/snylonue/anni-provider-od#ab21e13fc7c140529305265a2a5fd93c0590300d"
+source = "git+https://github.com/snylonue/anni-provider-od#790cc867362b275af03100813dc1f8b400e0719b"
 dependencies = [
  "anni-flac",
  "anni-provider",
