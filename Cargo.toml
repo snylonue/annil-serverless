@@ -28,8 +28,15 @@ serde_json = "1.0.89"
 
 [patch.crates-io]
 rusqlite = { git = "https://github.com/ProjectAnni/rusqlite", branch = "wasm32-unknown-unknown" }
-# dashmap = { git = "https://github.com/snylonue/dashmap", branch = "no-toolchain" }
-# jpeg-decoder = { git = "https://github.com/snylonue/jpeg-decoder" }
-# ff = { git = "https://github.com/snylonue/ff", branch = "no-toolchain" }
-# shuttle-service = { git = "https://github.com/snylonue/shuttle.git", branch = "tokio-dep" }
-anni-provider = { git = "https://github.com/ProjectAnni/anni.git", package = "anni-provider" }
+dashmap = { git = "https://github.com/snylonue/dashmap", branch = "no-toolchain" }
+jpeg-decoder = { git = "https://github.com/snylonue/jpeg-decoder" }
+ff = { git = "https://github.com/snylonue/ff", branch = "no-toolchain-0.12" }
+group = { git = "https://github.com/snylonue/group.git", branch = "no-toolchain" }
+
+[patch."https://github.com/ProjectAnni/anni.git"]
+anni-common = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-common" }
+anni-repo = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-repo" }
+anni-google-drive3 = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-google-drive3" }
+anni-flac = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-flac" }
+anni-provider = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-provider" }
+annil = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "annil" }
