@@ -55,7 +55,7 @@ checksum = "ec66320836265a59098af8343573a2160b12b8db033b6b879fa01fbcf95a50ed"
 [[package]]
 name = "anni-common"
 version = "0.1.1"
-source = "git+https://github.com/snylonue/anni?branch=no-toolchain#df7ef8183c878c092c5921c3141622d240cce03c"
+source = "git+https://github.com/ProjectAnni/anni.git#cef0eef362c432bc896d7afc951d06bc483dd8ee"
 dependencies = [
  "anni-artist",
  "byteorder",
@@ -74,7 +74,7 @@ dependencies = [
 [[package]]
 name = "anni-flac"
 version = "0.2.2"
-source = "git+https://github.com/snylonue/anni?branch=no-toolchain#df7ef8183c878c092c5921c3141622d240cce03c"
+source = "git+https://github.com/ProjectAnni/anni.git#cef0eef362c432bc896d7afc951d06bc483dd8ee"
 dependencies = [
  "async-trait",
  "byteorder",
@@ -110,7 +110,7 @@ dependencies = [
 [[package]]
 name = "anni-google-drive3"
 version = "0.1.0+4.0.0-20220225"
-source = "git+https://github.com/snylonue/anni?branch=no-toolchain#df7ef8183c878c092c5921c3141622d240cce03c"
+source = "git+https://github.com/ProjectAnni/anni.git#cef0eef362c432bc896d7afc951d06bc483dd8ee"
 dependencies = [
  "http",
  "hyper",
@@ -129,10 +129,10 @@ dependencies = [
 [[package]]
 name = "anni-provider"
 version = "0.1.2"
-source = "git+https://github.com/snylonue/anni?branch=no-toolchain#df7ef8183c878c092c5921c3141622d240cce03c"
+source = "git+https://github.com/ProjectAnni/anni.git#cef0eef362c432bc896d7afc951d06bc483dd8ee"
 dependencies = [
  "anni-flac",
- "anni-google-drive3 0.1.0+4.0.0-20220225 (git+https://github.com/snylonue/anni?branch=no-toolchain)",
+ "anni-google-drive3 0.1.0+4.0.0-20220225 (git+https://github.com/ProjectAnni/anni.git)",
  "anni-repo",
  "async-trait",
  "dashmap",
@@ -169,7 +169,7 @@ dependencies = [
 [[package]]
 name = "anni-repo"
 version = "0.1.1"
-source = "git+https://github.com/snylonue/anni?branch=no-toolchain#df7ef8183c878c092c5921c3141622d240cce03c"
+source = "git+https://github.com/ProjectAnni/anni.git#cef0eef362c432bc896d7afc951d06bc483dd8ee"
 dependencies = [
  "anni-artist",
  "anni-common",
@@ -187,6 +187,7 @@ dependencies = [
  "serde_rusqlite",
  "sqlite-vfs",
  "thiserror",
+ "toml",
  "toml_edit",
  "uuid",
  "wasm-bindgen",
@@ -195,14 +196,14 @@ dependencies = [
 [[package]]
 name = "annil"
 version = "0.1.0"
-source = "git+https://github.com/snylonue/anni?branch=no-toolchain#df7ef8183c878c092c5921c3141622d240cce03c"
+source = "git+https://github.com/ProjectAnni/anni.git#cef0eef362c432bc896d7afc951d06bc483dd8ee"
 dependencies = [
  "anni-flac",
  "anni-provider",
  "anyhow",
  "async-trait",
  "axum",
- "base64 0.20.0",
+ "base64 0.21.0",
  "env_logger",
  "futures",
  "jwt-simple",
@@ -211,7 +212,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util 0.7.4",
- "toml_edit",
+ "toml",
  "tower-http",
  "uuid",
 ]
@@ -355,12 +356,6 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64"
@@ -534,16 +529,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
-name = "combine"
-version = "4.6.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35ed6e9d84f0b51a7f52daf1c7d71dd136fd7a3f41a8462b8cdb8c78d920fad4"
-dependencies = [
- "bytes",
- "memchr",
-]
-
-[[package]]
 name = "const-oid"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -707,7 +692,8 @@ dependencies = [
 [[package]]
 name = "dashmap"
 version = "5.4.0"
-source = "git+https://github.com/snylonue/dashmap?branch=no-toolchain#930157eef56fb87af3eeb190930d5286f614fb25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "907076dfda823b0b36d2a1bb5f90c96660a5bbcd7729e10727f07858f22c4edc"
 dependencies = [
  "cfg-if",
  "hashbrown",
@@ -877,7 +863,8 @@ dependencies = [
 [[package]]
 name = "ff"
 version = "0.12.1"
-source = "git+https://github.com/snylonue/ff?branch=no-toolchain-0.12#098cc100ed3365cc6e070b2c4dd5e71c63fada92"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d013fc25338cc558c5c2cfbad646908fb23591e2404481826742b651c9af7160"
 dependencies = [
  "rand_core",
  "subtle",
@@ -1073,7 +1060,8 @@ checksum = "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
 [[package]]
 name = "group"
 version = "0.12.1"
-source = "git+https://github.com/snylonue/group.git?branch=no-toolchain#2de74e98c5ddb9b0357d74bc0ace7d0bea3047f7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dfbfb3a6cfbd390d5c9564ab283a0349b9b9fcd46a706c1eb10e0db70bfbac7"
 dependencies = [
  "ff",
  "rand_core",
@@ -1416,7 +1404,8 @@ checksum = "fad582f4b9e86b6caa621cabeb0963332d92eea04729ab12892c2533951e6440"
 [[package]]
 name = "jpeg-decoder"
 version = "0.3.0"
-source = "git+https://github.com/snylonue/jpeg-decoder#be6317f652c7d6736192c273bd35549a2f4d8dac"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc0000e42512c92e31c2252315bda326620a4e034105e900c98ec492fa077b3e"
 dependencies = [
  "rayon",
 ]
@@ -1658,6 +1647,15 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
+]
+
+[[package]]
+name = "nom8"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae01545c9c7fc4486ab7debaf2aad7003ac19431791868fb2e8066df97fad2f8"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -2520,6 +2518,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_spanned"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0efd8caf556a6cebd3b285caf480045fcc1ac04f6bd786b09a6f11af30c4fcf4"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2553,9 +2560,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-codegen"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "163c775942bf95dce6b663d3fcf4d2fedd3ef5c6c52feaaed6282de70a4ffaaa"
+checksum = "66ae5889c55fbd5aaa51b8ee5ed979c028d13ff5e092ec94b7dd5242150b0234"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -2565,9 +2572,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-common"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d08465a989de517720e435e70c7fc9f2edd286c0fd77688b7adf792dba99fce"
+checksum = "419c6ffbe9a898157eadfb436e25e102170c3105b0d8991a660e3272f7e1aa09"
 dependencies = [
  "chrono",
  "once_cell",
@@ -2580,9 +2587,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-persist"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d17d9e7229e6744238fdd136832a99bc40a530ac5e38f053b4adc3a494eb8ca"
+checksum = "c9aad637e4fa2e371cf46149e9d8a15fab737263c834d79e73a7cc5ee35ce19f"
 dependencies = [
  "async-trait",
  "bincode",
@@ -2595,9 +2602,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-secrets"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91183fd726946a4bf5338cd5ebe92c2f6330414d437b5ea122302bcdb47e8fb4"
+checksum = "72fd463f83ca83a5b6b1aaa101aeecd91837e2537fc7b60c3b95cc9c0275acea"
 dependencies = [
  "async-trait",
  "shuttle-service",
@@ -2606,9 +2613,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-service"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae790320daef991c63fe3e1fe85c6cc631ef7fcdaf5a8ffc8f5803197521d463"
+checksum = "ea92a1dbdf1be762ef60d923fff1a866d21df56427b94a617a9a0a75f60b7e16"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2621,6 +2628,7 @@ dependencies = [
  "serde_json",
  "shuttle-codegen",
  "shuttle-common",
+ "strfmt",
  "sync_wrapper",
  "thiserror",
  "tokio",
@@ -2719,6 +2727,12 @@ dependencies = [
  "rand",
  "time 0.3.17",
 ]
+
+[[package]]
+name = "strfmt"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b73de159e5e71c4c7579ea3041d3e765f46790555790c24489195554210f1fb4"
 
 [[package]]
 name = "strsim"
@@ -2991,15 +3005,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_edit"
-version = "0.14.4"
+name = "toml"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5376256e44f2443f8896ac012507c19a012df0fe8758b55246ae51a2279db51f"
+checksum = "772c1426ab886e7362aedf4abc9c0d1348a979517efedfc25862944d10137af0"
 dependencies = [
- "combine",
- "indexmap",
- "itertools",
  "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_edit",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ab8ed2edee10b50132aed5f331333428b011c99402b5a534154ed15746f9622"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90a238ee2e6ede22fb95350acc78e21dc40da00bb66c0334bde83de4ed89424e"
+dependencies = [
+ "indexmap",
+ "nom8",
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
 ]
 
 [[package]]
