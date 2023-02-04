@@ -15,7 +15,6 @@ anni-provider = { git = "https://github.com/ProjectAnni/anni.git", package = "an
 anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od" }
 annil = { git = "https://github.com/ProjectAnni/anni.git", package = "annil", default-features = false }
 jwt-simple = "0.11"
-anni-google-drive3 = "0.1"
 uuid = { version = "1", features = ["serde"]}
 tokio = "1"
 tokio-util = { version = "0.6.10", features = ["compat", "io"] }
