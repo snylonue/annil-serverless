@@ -10,11 +10,11 @@ use anni_provider_od::{
 };
 use annil::{
     provider::AnnilProvider,
-    state::{AnnilKeys, AnnilState},
+    state::{AnnilKeys, AnnilState}, extractor::{track::TrackIdentifier},
 };
 use axum::{
     http::{Method, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response, Redirect},
     routing::{get, post},
     Extension, Router,
 };
@@ -55,6 +55,24 @@ impl IntoResponse for Error {
     }
 }
 
+async fn aduio_raw(
+    track: TrackIdentifier,
+    Extension(provider): Extension<Arc<AnnilProvider<OneDriveProvider>>>,
+) -> Response {
+    // if !claim.can_fetch(&track) {
+        // return AnnilError::Unauthorized.into_response();
+    // }
+
+    let provider = provider.read().await;
+
+    let uri = match provider.audio_url(&track.album_id.to_string(), track.disc_id, track.track_id).await {
+        Ok((uri, _)) => uri,
+        Err(_) => return "error".into_response(),
+    };
+
+    Redirect::temporary(&uri).into_response()
+}
+
 #[shuttle_service::main]
 async fn axum(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
@@ -74,7 +92,7 @@ async fn axum(
     let provider = Arc::new(AnnilProvider::new(Provider::new(od).await.unwrap()));
 
     let annil_state = Arc::new(AnnilState {
-        version: String::from("AnnilServerless v0.3.0"),
+        version: String::from("AnnilServerless v0.3.1"),
         last_update: RwLock::new(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -105,7 +123,7 @@ async fn axum(
         )
         .route(
             "/:album_id/:disc_id/:track_id",
-            get(annil::route::user::audio::<Provider>)
+            get(aduio_raw)
                 .head(annil::route::user::audio_head::<Provider>),
         )
         .route(
