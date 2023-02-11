@@ -1,4 +1,4 @@
-name: Shuttle deploy
+name: Docker
 
 on:
   workflow_dispatch:
@@ -9,17 +9,33 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
-      - name: Add secrets
-        run: |
-          # Generate Secrets file
-          echo `od_refresh_token = ${{ secrets.od_refresh_token }}` >> Secrets.toml
-          echo `od_client_id = ${{ secrets.od_client_id }}` >> Secrets.toml
-          echo `od_client_secret = ${{ secrets.od_client_secret }}` >> Secrets.toml
-          echo `sign_key = ${{ secrets.sign_key }}` >> Secrets.toml
-          echo `share_key = ${{ secrets.share_key }}` >> Secrets.toml
-          echo `share_key_id = ${{ secrets.share_key_id }}` >> Secrets.toml
-          echo `admin_token = ${{ secrets.admin_token }}` >> Secrets.toml
-      - uses: shuttle-hq/deploy-action@v0.0.3
+      - uses: actions-rs/toolchain@v1
         with:
-          deploy-key: ${{ secrets.SHUTTLE_DEPLOY_KEY }}
-          allow-dirty: true
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Setup | Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: annil-serverless-cache
+
+      - name: Build | Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --locked
+
+      - name: Docker | Prepare Context
+        run: |
+          cp target/release/annil ./docker/
+
+      - name: Docker | Build and Publish
+        uses: macbre/push-to-ghcr@master
+        with:
+          image_name: snylonue/annil-serverless
+          dockerfile: ./docker/Dockerfile
+          context: ./docker
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          DOCKER_BUILDKIT: 1

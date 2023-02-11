@@ -1,41 +1,21 @@
 [package]
-name = "annil_serverless"
+name = "annil-serverless"
 version = "0.1.0"
 edition = "2021"
-publish = false
-
-[lib]
 
 [dependencies]
-shuttle-service = { version = "0.9", features = ["web-axum"] }
 axum = { version = "0.6", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
-sync_wrapper = "0.1.1"
 anni-provider = { git = "https://github.com/ProjectAnni/anni.git", package = "anni-provider", default-features = false }
 anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od" }
 annil = { git = "https://github.com/ProjectAnni/anni.git", package = "annil", default-features = false }
 jwt-simple = "0.11"
 uuid = { version = "1", features = ["serde"]}
-tokio = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"]}
 tokio-util = { version = "0.6.10", features = ["compat", "io"] }
 tower-http = { version = "0.3", features = ["cors"]}
 tower = "0.4"
-shuttle-persist = "0.9"
-shuttle-secrets = "0.9"
-anyhow = "1.0.66"
 serde_json = "1.0.89"
 
 [patch.crates-io]
 rusqlite = { git = "https://github.com/ProjectAnni/rusqlite", branch = "wasm32-unknown-unknown" }
-# dashmap = { git = "https://github.com/snylonue/dashmap", branch = "no-toolchain" }
-# jpeg-decoder = { git = "https://github.com/snylonue/jpeg-decoder" }
-# ff = { git = "https://github.com/snylonue/ff", branch = "no-toolchain-0.12" }
-# group = { git = "https://github.com/snylonue/group.git", branch = "no-toolchain" }
-# 
-# [patch."https://github.com/ProjectAnni/anni.git"]
-# anni-common = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-common" }
-# anni-repo = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-repo" }
-# anni-google-drive3 = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-google-drive3" }
-# anni-flac = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-flac" }
-# anni-provider = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "anni-provider" }
-# annil = { git = "https://github.com/snylonue/anni", branch = "no-toolchain", package = "annil" }
