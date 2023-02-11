@@ -1,0 +1,43 @@
+name: Docker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: docker
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Setup | Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: annil-serverless-cache
+
+      - name: Build | Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --locked
+
+      - name: Docker | Prepare Context
+        run: |
+          cp target/release/annil ./docker/
+
+      - name: Docker | Build and Publish
+        uses: macbre/push-to-ghcr@master
+        with:
+          image_name: snylonue/annil-serverless
+          dockerfile: ./docker/Dockerfile
+          context: ./docker
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          DOCKER_BUILDKIT: 1
