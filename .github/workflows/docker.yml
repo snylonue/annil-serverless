@@ -30,7 +30,7 @@ jobs:
 
       - name: Docker | Prepare Context
         run: |
-          cp target/release/annil ./docker/
+          cp target/release/annil-serverless ./docker/annil
 
       - name: Docker | Build and Publish
         uses: macbre/push-to-ghcr@master
