@@ -6,15 +6,16 @@ use std::{
 use anni_provider::ProviderError;
 use anni_provider_od::{
     onedrive_api::{DriveId, DriveLocation},
-    OneDriveClient, OneDriveProvider,
+    ClientInfo, OneDriveClient, OneDriveProvider,
 };
 use annil::{
+    extractor::track::TrackIdentifier,
     provider::AnnilProvider,
-    state::{AnnilKeys, AnnilState}, extractor::{track::TrackIdentifier},
+    state::{AnnilKeys, AnnilState},
 };
 use axum::{
     http::{Method, StatusCode},
-    response::{IntoResponse, Response, Redirect},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Extension, Router,
 };
@@ -59,12 +60,15 @@ async fn aduio_raw(
     Extension(provider): Extension<Arc<AnnilProvider<OneDriveProvider>>>,
 ) -> Response {
     // if !claim.can_fetch(&track) {
-        // return AnnilError::Unauthorized.into_response();
+    // return AnnilError::Unauthorized.into_response();
     // }
 
     let provider = provider.read().await;
 
-    let uri = match provider.audio_url(&track.album_id.to_string(), track.disc_id, track.track_id).await {
+    let uri = match provider
+        .audio_url(&track.album_id.to_string(), track.disc_id, track.track_id)
+        .await
+    {
         Ok((uri, _)) => uri,
         Err(_) => return "error".into_response(),
     };
@@ -73,17 +77,17 @@ async fn aduio_raw(
 }
 
 #[shuttle_runtime::main]
-async fn axum(
-    #[shuttle_secrets::Secrets] secret_store: SecretStore,
-) -> shuttle_axum::ShuttleAxum {
+async fn axum(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> shuttle_axum::ShuttleAxum {
     let location = DriveLocation::from_id(DriveId(String::from(
         "b!uyGkzZXn6UeUrlI00cEEwB0U-PTBJVNIkX2vruaA2Wsnkoejm3etQpoha4pffHk9",
     )));
     let od = OneDriveClient::new(
-        secret_store.get("od_refresh_token").unwrap(),
         secret_store.get("od_client_id").unwrap(),
-        secret_store.get("od_client_secret").unwrap(),
-        location,
+        ClientInfo::new(
+            secret_store.get("od_refresh_token").unwrap(),
+            secret_store.get("od_client_secret").unwrap(),
+            location,
+        ),
     )
     .await
     .unwrap();
@@ -122,8 +126,7 @@ async fn axum(
         )
         .route(
             "/:album_id/:disc_id/:track_id",
-            get(aduio_raw)
-                .head(annil::route::user::audio_head::<Provider>),
+            get(aduio_raw).head(annil::route::user::audio_head::<Provider>),
         )
         .route(
             "/admin/reload",

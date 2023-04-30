@@ -133,12 +133,12 @@ dependencies = [
 [[package]]
 name = "anni-provider-od"
 version = "0.1.0"
-source = "git+https://github.com/snylonue/anni-provider-od#790cc867362b275af03100813dc1f8b400e0719b"
+source = "git+https://github.com/snylonue/anni-provider-od?rev=6da74ce#6da74ce39d7d7411c8e1cbbddbf9b133a96d7b14"
 dependencies = [
  "anni-flac",
  "anni-provider",
  "async-trait",
- "dashmap",
+ "log",
  "onedrive-api",
  "reqwest",
  "tokio",
