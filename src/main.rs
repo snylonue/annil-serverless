@@ -20,7 +20,6 @@ use axum::{
 };
 use jwt_simple::prelude::HS256Key;
 use shuttle_secrets::SecretStore;
-use sync_wrapper::SyncWrapper;
 use tokio::sync::RwLock;
 
 use tower::ServiceBuilder;
@@ -73,10 +72,10 @@ async fn aduio_raw(
     Redirect::temporary(&uri).into_response()
 }
 
-#[shuttle_service::main]
+#[shuttle_runtime::main]
 async fn axum(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
-) -> shuttle_service::ShuttleAxum {
+) -> shuttle_axum::ShuttleAxum {
     let location = DriveLocation::from_id(DriveId(String::from(
         "b!uyGkzZXn6UeUrlI00cEEwB0U-PTBJVNIkX2vruaA2Wsnkoejm3etQpoha4pffHk9",
     )));
@@ -143,7 +142,6 @@ async fn axum(
                 .layer(Extension(Arc::clone(&provider)))
                 .layer(Extension(Arc::clone(&key))),
         );
-    let sync_wrapper = SyncWrapper::new(router);
 
-    Ok(sync_wrapper)
+    Ok(router.into())
 }
