@@ -1,6 +1,6 @@
 use std::{
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use anni_provider::ProviderError;
@@ -21,7 +21,7 @@ use axum::{
 };
 use jwt_simple::prelude::HS256Key;
 use shuttle_secrets::SecretStore;
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, time::sleep};
 
 use tower::ServiceBuilder;
 use tower_http::cors::Any;
@@ -76,6 +76,10 @@ async fn aduio_raw(
     Redirect::temporary(&uri).into_response()
 }
 
+fn now() -> Duration {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+}
+
 #[shuttle_runtime::main]
 async fn axum(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> shuttle_axum::ShuttleAxum {
     let location = DriveLocation::from_id(DriveId(String::from(
@@ -94,8 +98,26 @@ async fn axum(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> shuttle_
 
     let provider = Arc::new(AnnilProvider::new(Provider::new(od).await.unwrap()));
 
+    let pd = Arc::clone(&provider);
+    tokio::spawn(async move {
+        loop {
+            let p = pd.read().await;
+            if p.drive.is_expired() {
+                log::debug!("token expired, refreshing");
+                match p.drive.refresh().await {
+                    Ok(_) => log::debug!("new token will expire at {}", p.drive.expire()),
+                    Err(e) => log::error!("refresh failed: {}", e),
+                };
+            }
+            sleep(Duration::from_secs(
+                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10),
+            ))
+            .await
+        }
+    });
+
     let annil_state = Arc::new(AnnilState {
-        version: String::from("AnnilServerless v0.3.1"),
+        version: String::from("AnnilServerless v0.4.0"),
         last_update: RwLock::new(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -132,7 +154,6 @@ async fn axum(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> shuttle_
             "/admin/reload",
             post(annil::route::admin::reload::<Provider>),
         )
-        // .route("/admin/update_token", get(update_token))
         .layer(
             tower_http::cors::CorsLayer::new()
                 .allow_methods([Method::GET, Method::OPTIONS, Method::POST])
