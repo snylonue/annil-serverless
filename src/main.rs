@@ -20,7 +20,8 @@ use axum::{
     Extension, Router,
 };
 use jwt_simple::prelude::HS256Key;
-use shuttle_secrets::SecretStore;
+use shuttle_persist::{Persist, PersistInstance};
+use shuttle_secrets::{SecretStore, Secrets};
 use tokio::{sync::RwLock, time::sleep};
 
 use tower::ServiceBuilder;
@@ -33,6 +34,38 @@ struct AnnilInfo {
     version: String,
     protocol_version: String,
     last_update: u64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct ClientInfoStorage {
+    refresh_token: String,
+    expire: u64,
+    old_token: String,
+}
+
+impl ClientInfoStorage {
+    fn from_client_info(info: &ClientInfo, expire: u64, old_token: String) -> Self {
+        Self {
+            refresh_token: info.refresh_token.clone(),
+            expire,
+            old_token,
+        }
+    }
+
+    fn load(secret: &SecretStore, persist: &PersistInstance) -> Self {
+        let refresh_token = secret.get("od_refresh_token").unwrap();
+        match persist.load::<ClientInfoStorage>("refresh_token") {
+            Ok(info) if info.expire > now().as_secs() && info.old_token == refresh_token => info,
+            _ => {
+                log::warn!("failed to load refresh token or refresh token is expired or gets updated, reading from secret store");
+                Self {
+                    refresh_token: refresh_token.clone(),
+                    expire: 0,
+                    old_token: refresh_token,
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -59,10 +92,6 @@ async fn aduio_raw(
     track: TrackIdentifier,
     Extension(provider): Extension<Arc<AnnilProvider<OneDriveProvider>>>,
 ) -> Response {
-    // if !claim.can_fetch(&track) {
-    // return AnnilError::Unauthorized.into_response();
-    // }
-
     let provider = provider.read().await;
 
     let uri = match provider
@@ -81,14 +110,19 @@ fn now() -> Duration {
 }
 
 #[shuttle_runtime::main]
-async fn axum(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> shuttle_axum::ShuttleAxum {
+async fn axum(
+    #[Secrets] secret_store: SecretStore,
+    #[Persist] persist: PersistInstance,
+) -> shuttle_axum::ShuttleAxum {
+    let token = ClientInfoStorage::load(&secret_store, &persist);
+
     let location = DriveLocation::from_id(DriveId(String::from(
         "b!uyGkzZXn6UeUrlI00cEEwB0U-PTBJVNIkX2vruaA2Wsnkoejm3etQpoha4pffHk9",
     )));
     let od = OneDriveClient::new(
         secret_store.get("od_client_id").unwrap(),
         ClientInfo::new(
-            secret_store.get("od_refresh_token").unwrap(),
+            token.refresh_token,
             secret_store.get("od_client_secret").unwrap(),
             location,
         ),
@@ -106,7 +140,18 @@ async fn axum(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> shuttle_
                 log::debug!("token expired, refreshing");
                 match p.drive.refresh().await {
                     Ok(_) => log::debug!("new token will expire at {}", p.drive.expire()),
-                    Err(e) => log::error!("refresh failed: {}", e),
+                    Err(e) => log::error!("refresh failed: {e}"),
+                };
+                match persist.save(
+                    "refresh_token",
+                    ClientInfoStorage::from_client_info(
+                        &*p.drive.client_info().await,
+                        p.drive.expire(),
+                        token.old_token.clone(),
+                    ),
+                ) {
+                    Ok(_) => {}
+                    Err(e) => log::error!("persist error: {e}"),
                 };
             }
             sleep(Duration::from_secs(
