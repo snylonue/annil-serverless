@@ -3,7 +3,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anni_provider::ProviderError;
+use anni_provider::{AnniProvider, ProviderError};
 use anni_provider_od::{
     onedrive_api::{DriveId, DriveLocation},
     ClientInfo, OneDriveClient, OneDriveProvider,
@@ -14,7 +14,10 @@ use annil::{
     state::{AnnilKeys, AnnilState},
 };
 use axum::{
-    http::{header::CACHE_CONTROL, Method, StatusCode},
+    http::{
+        header::{ACCESS_CONTROL_EXPOSE_HEADERS, CACHE_CONTROL},
+        Method, StatusCode,
+    },
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Extension, Router,
@@ -55,9 +58,9 @@ impl ClientInfoStorage {
     fn load(secret: &SecretStore, persist: &PersistInstance) -> Self {
         let refresh_token = secret.get("od_refresh_token").unwrap();
         match persist.load::<ClientInfoStorage>("refresh_token") {
-            Ok(info) if info.expire > now().as_secs() && info.old_token == refresh_token => info,
+            Ok(info) if info.old_token == refresh_token => info,
             _ => {
-                log::warn!("failed to load refresh token or refresh token is expired or gets updated, reading from secret store");
+                log::warn!("failed to load refresh token or refresh token got updated, reading from secret store");
                 Self {
                     refresh_token: refresh_token.clone(),
                     expire: 0,
@@ -113,7 +116,25 @@ async fn aduio_raw(
         }
     };
 
-    Redirect::temporary(&uri).into_response()
+    let info = match provider
+        .get_audio_info(&track.album_id.to_string(), track.disc_id, track.track_id)
+        .await
+    {
+        Ok(info) => info,
+        Err(e) => return Error::from(e).into_response(),
+    };
+    let header = [(
+        ACCESS_CONTROL_EXPOSE_HEADERS,
+        "X-Origin-Type, X-Origin-Size, X-Duration-Seconds, X-Audio-Quality".to_string(),
+    )];
+    let headers = [
+        ("X-Origin-Type", format!("audio/{}", info.extension)),
+        ("X-Origin-Size", format!("{}", info.size)),
+        ("X-Duration-Seconds", format!("{}", info.duration)),
+        ("X-Audio-Quality", String::from("lossless")),
+    ];
+
+    (header, headers, Redirect::temporary(&uri)).into_response()
 }
 
 fn now() -> Duration {
