@@ -14,7 +14,7 @@ use annil::{
     state::{AnnilKeys, AnnilState},
 };
 use axum::{
-    http::{Method, StatusCode},
+    http::{header::CACHE_CONTROL, Method, StatusCode},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Extension, Router,
@@ -82,7 +82,11 @@ impl From<ProviderError> for Error {
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
         match self {
-            Self::AnniError(error) => (StatusCode::NOT_FOUND, error.to_string()),
+            Self::AnniError(error) => (
+                StatusCode::NOT_FOUND,
+                [(CACHE_CONTROL, "private")],
+                error.to_string(),
+            ),
         }
         .into_response()
     }
@@ -99,7 +103,14 @@ async fn aduio_raw(
         .await
     {
         Ok((uri, _)) => uri,
-        Err(_) => return "error".into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(CACHE_CONTROL, "private")],
+                format!("{e:?}"),
+            )
+                .into_response()
+        }
     };
 
     Redirect::temporary(&uri).into_response()
