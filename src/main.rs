@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroU8,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -14,6 +15,7 @@ use annil::{
     state::{AnnilKeys, AnnilState},
 };
 use axum::{
+    extract::Path,
     http::{
         header::{ACCESS_CONTROL_EXPOSE_HEADERS, CACHE_CONTROL},
         Method, StatusCode,
@@ -23,6 +25,7 @@ use axum::{
     Extension, Router,
 };
 use jwt_simple::prelude::HS256Key;
+use serde::Deserialize;
 use shuttle_persist::{Persist, PersistInstance};
 use shuttle_secrets::{SecretStore, Secrets};
 use tokio::{sync::RwLock, time::sleep};
@@ -137,6 +140,33 @@ async fn aduio_raw(
     (header, headers, Redirect::temporary(&uri)).into_response()
 }
 
+#[derive(Deserialize)]
+struct CoverPath {
+    album_id: String,
+    disc_id: Option<NonZeroU8>,
+}
+
+async fn cover_raw(
+    Path(CoverPath { album_id, disc_id }): Path<CoverPath>,
+    Extension(provider): Extension<Arc<AnnilProvider<OneDriveProvider>>>,
+) -> Response {
+    let provider = provider.read().await;
+
+    let uri = match provider.cover_url(&album_id, disc_id).await {
+        Ok(uri) => uri,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(CACHE_CONTROL, "private")],
+                format!("{e:?}"),
+            )
+                .into_response()
+        }
+    };
+
+    Redirect::temporary(&uri).into_response()
+}
+
 fn now() -> Duration {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
 }
@@ -215,14 +245,8 @@ async fn axum(
     let router = Router::new()
         .route("/info", get(annil::route::user::info))
         .route("/albums", get(annil::route::user::albums::<Provider>))
-        .route(
-            "/:album_id/cover",
-            get(annil::route::user::cover::<Provider>),
-        )
-        .route(
-            "/:album_id/:disc_id/cover",
-            get(annil::route::user::cover::<Provider>),
-        )
+        .route("/:album_id/cover", get(cover_raw))
+        .route("/:album_id/:disc_id/cover", get(cover_raw))
         .route(
             "/:album_id/:disc_id/:track_id",
             get(aduio_raw).head(annil::route::user::audio_head::<Provider>),
