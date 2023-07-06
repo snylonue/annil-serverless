@@ -5,10 +5,10 @@ edition = "2021"
 publish = false
 
 [dependencies]
-shuttle-axum = "0.19"
-shuttle-runtime = "0.19"
-shuttle-persist = "0.19"
-shuttle-secrets = "0.19"
+shuttle-axum = "0.20"
+shuttle-runtime = "0.20"
+shuttle-persist = "0.20"
+shuttle-secrets = "0.20"
 axum = { version = "0.6", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 sync_wrapper = "0.1.1"
