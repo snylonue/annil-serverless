@@ -192,7 +192,9 @@ async fn axum(
     .await
     .unwrap();
 
-    let provider = Arc::new(AnnilProvider::new(Provider::new(od).await.unwrap()));
+    let provider = Arc::new(AnnilProvider::new(
+        Provider::new(od, "/anni-ws".to_owned(), 0).await.unwrap(),
+    ));
 
     let pd = Arc::clone(&provider);
     tokio::spawn(async move {
