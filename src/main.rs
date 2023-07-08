@@ -226,7 +226,7 @@ async fn axum(
     });
 
     let annil_state = Arc::new(AnnilState {
-        version: String::from("AnnilServerless v0.4.0"),
+        version: String::from(concat!("AnnilServerless v", env!("CARGO_PKG_VERSION"))),
         last_update: RwLock::new(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
