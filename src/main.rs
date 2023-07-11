@@ -218,10 +218,9 @@ async fn axum(
                     Err(e) => log::error!("persist error: {e}"),
                 };
             }
-            sleep(Duration::from_secs(
-                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10),
-            ))
-            .await
+            let expire_in = p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10);
+            drop(p);
+            sleep(Duration::from_secs(expire_in)).await
         }
     });
 
