@@ -199,27 +199,28 @@ async fn axum(
     let pd = Arc::clone(&provider);
     tokio::spawn(async move {
         loop {
-            let p = pd.read().await;
-            if p.drive.is_expired() {
-                log::debug!("token expired, refreshing");
-                match p.drive.refresh().await {
-                    Ok(_) => log::debug!("new token will expire at {}", p.drive.expire()),
-                    Err(e) => log::error!("refresh failed: {e}"),
-                };
-                match persist.save(
-                    "refresh_token",
-                    ClientInfoStorage::from_client_info(
-                        &*p.drive.client_info().await,
-                        p.drive.expire(),
-                        token.old_token.clone(),
-                    ),
-                ) {
-                    Ok(_) => {}
-                    Err(e) => log::error!("persist error: {e}"),
-                };
-            }
-            let expire_in = p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10);
-            drop(p);
+            let expire_in = {
+                let p = pd.read().await;
+                if p.drive.is_expired() {
+                    log::debug!("token expired, refreshing");
+                    match p.drive.refresh().await {
+                        Ok(_) => log::debug!("new token will expire at {}", p.drive.expire()),
+                        Err(e) => log::error!("refresh failed: {e}"),
+                    };
+                    match persist.save(
+                        "refresh_token",
+                        ClientInfoStorage::from_client_info(
+                            &*p.drive.client_info().await,
+                            p.drive.expire(),
+                            token.old_token.clone(),
+                        ),
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => log::error!("persist error: {e}"),
+                    };
+                }
+                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10)
+            }; // `p` should get dropped here
             sleep(Duration::from_secs(expire_in)).await
         }
     });
