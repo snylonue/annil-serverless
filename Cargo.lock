@@ -133,7 +133,7 @@ dependencies = [
 [[package]]
 name = "anni-provider-od"
 version = "0.1.0"
-source = "git+https://github.com/snylonue/anni-provider-od?rev=87ef211e#87ef211e7940d35ed854934f27170d24c88f212e"
+source = "git+https://github.com/snylonue/anni-provider-od?rev=d238d06#d238d06e1baa7dbf6a8664319666553dca00d594"
 dependencies = [
  "anni-flac",
  "anni-provider",
@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "annil_serverless"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "anni-provider",
  "anni-provider-od",

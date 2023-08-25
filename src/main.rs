@@ -33,8 +33,6 @@ use tokio::{sync::RwLock, time::sleep};
 use tower::ServiceBuilder;
 use tower_http::cors::Any;
 
-type Provider = OneDriveProvider;
-
 #[derive(Debug, serde::Serialize)]
 struct AnnilInfo {
     version: String,
@@ -193,7 +191,7 @@ async fn axum(
     .unwrap();
 
     let provider = Arc::new(AnnilProvider::new(
-        Provider::new(od, "/anni-ws".to_owned(), 0).await.unwrap(),
+        OneDriveProvider::new(od, "/anni-ws".to_owned(), 0).await.unwrap(),
     ));
 
     let pd = Arc::clone(&provider);
@@ -246,17 +244,18 @@ async fn axum(
 
     let router = Router::new()
         .route("/info", get(annil::route::user::info))
-        .route("/albums", get(annil::route::user::albums::<Provider>))
+        .route("/albums", get(annil::route::user::albums::<OneDriveProvider>))
         .route("/:album_id/cover", get(cover_raw))
         .route("/:album_id/:disc_id/cover", get(cover_raw))
         .route(
             "/:album_id/:disc_id/:track_id",
-            get(aduio_raw).head(annil::route::user::audio_head::<Provider>),
+            get(aduio_raw).head(annil::route::user::audio_head::<OneDriveProvider>),
         )
         .route(
             "/admin/reload",
-            post(annil::route::admin::reload::<Provider>),
+            post(annil::route::admin::reload::<OneDriveProvider>),
         )
+        .route("/admin/sign", post(annil::route::admin::sign))
         .layer(
             tower_http::cors::CorsLayer::new()
                 .allow_methods([Method::GET, Method::OPTIONS, Method::POST])
