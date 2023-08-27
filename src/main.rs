@@ -189,12 +189,22 @@ async fn axum(
     .await
     .unwrap();
 
-    let provider = Arc::new(AnnilProvider::new(TypedPriorityProvider::new(vec![(
-        0,
-        OneDriveProvider::new(od, "/anni-ws".to_owned(), 0)
-            .await
-            .unwrap(),
-    )])));
+    let od = Arc::new(od);
+
+    let provider = Arc::new(AnnilProvider::new(TypedPriorityProvider::new(vec![
+        (
+            1,
+            OneDriveProvider::new(Arc::clone(&od), "/anni-ws".to_owned(), 0)
+                .await
+                .unwrap(),
+        ),
+        (
+            0,
+            OneDriveProvider::new(Arc::clone(&od), "/anni-ws-lossy".to_owned(), 0)
+                .await
+                .unwrap(),
+        ),
+    ])));
 
     let pd = Arc::clone(&provider);
     // todo: refresh token separately

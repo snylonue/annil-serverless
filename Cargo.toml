@@ -12,7 +12,7 @@ shuttle-secrets = "0.21"
 axum = { version = "0.6", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 anni-provider = { git = "https://github.com/ProjectAnni/anni", package = "anni-provider", default-features = false }
-anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od", rev = "d238d06" }
+anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od", rev = "38e593f" }
 annil = { git = "https://github.com/ProjectAnni/anni.git", package = "annil", default-features = false }
 jwt-simple = "0.11"
 uuid = { version = "1", features = ["serde"]}
