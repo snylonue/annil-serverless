@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anni_provider::{AnniProvider, ProviderError};
+use anni_provider::{providers::TypedPriorityProvider, AnniProvider, ProviderError};
 use anni_provider_od::{
     onedrive_api::{DriveId, DriveLocation},
     ClientInfo, OneDriveClient, OneDriveProvider,
@@ -29,7 +29,6 @@ use serde::Deserialize;
 use shuttle_persist::{Persist, PersistInstance};
 use shuttle_secrets::{SecretStore, Secrets};
 use tokio::{sync::RwLock, time::sleep};
-
 use tower::ServiceBuilder;
 use tower_http::cors::Any;
 
@@ -190,35 +189,55 @@ async fn axum(
     .await
     .unwrap();
 
-    let provider = Arc::new(AnnilProvider::new(
-        OneDriveProvider::new(od, "/anni-ws".to_owned(), 0).await.unwrap(),
-    ));
+    let provider = Arc::new(AnnilProvider::new(TypedPriorityProvider::new(vec![(
+        0,
+        OneDriveProvider::new(od, "/anni-ws".to_owned(), 0)
+            .await
+            .unwrap(),
+    )])));
 
     let pd = Arc::clone(&provider);
+    // todo: refresh token separately
     tokio::spawn(async move {
         loop {
             let expire_in = {
                 let p = pd.read().await;
-                if p.drive.is_expired() {
-                    log::debug!("token expired, refreshing");
-                    match p.drive.refresh().await {
-                        Ok(_) => log::debug!("new token will expire at {}", p.drive.expire()),
-                        Err(e) => log::error!("refresh failed: {e}"),
-                    };
-                    match persist.save(
-                        "refresh_token",
-                        ClientInfoStorage::from_client_info(
-                            &*p.drive.client_info().await,
-                            p.drive.expire(),
-                            token.old_token.clone(),
-                        ),
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => log::error!("persist error: {e}"),
-                    };
+                let providers = p.providers();
+
+                let mut expire = Vec::with_capacity(providers.size_hint().0);
+
+                for provider in providers {
+                    if provider.drive.is_expired() {
+                        log::debug!("token expired, refreshing");
+                        match provider.drive.refresh().await {
+                            Ok(_) => {
+                                log::debug!("new token will expire at {}", provider.drive.expire())
+                            }
+                            Err(e) => log::error!("refresh failed: {e}"),
+                        };
+                        match persist.save(
+                            "refresh_token",
+                            ClientInfoStorage::from_client_info(
+                                &*provider.drive.client_info().await,
+                                provider.drive.expire(),
+                                token.old_token.clone(),
+                            ),
+                        ) {
+                            Ok(_) => {}
+                            Err(e) => log::error!("persist error: {e}"),
+                        };
+                    }
+                    expire.push(
+                        provider
+                            .drive
+                            .expire()
+                            .checked_sub(now().as_secs())
+                            .unwrap_or(10),
+                    );
                 }
-                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10)
+                expire.into_iter().min().unwrap()
             }; // `p` should get dropped here
+
             sleep(Duration::from_secs(expire_in)).await
         }
     });
@@ -244,7 +263,10 @@ async fn axum(
 
     let router = Router::new()
         .route("/info", get(annil::route::user::info))
-        .route("/albums", get(annil::route::user::albums::<OneDriveProvider>))
+        .route(
+            "/albums",
+            get(annil::route::user::albums::<OneDriveProvider>),
+        )
         .route("/:album_id/cover", get(cover_raw))
         .route("/:album_id/:disc_id/cover", get(cover_raw))
         .route(

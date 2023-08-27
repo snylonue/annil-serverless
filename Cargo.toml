@@ -11,7 +11,7 @@ shuttle-persist = "0.21"
 shuttle-secrets = "0.21"
 axum = { version = "0.6", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
-anni-provider = { git = "https://github.com/ProjectAnni/anni.git", package = "anni-provider", default-features = false }
+anni-provider = { git = "https://github.com/ProjectAnni/anni", package = "anni-provider", default-features = false }
 anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od", rev = "d238d06" }
 annil = { git = "https://github.com/ProjectAnni/anni.git", package = "annil", default-features = false }
 jwt-simple = "0.11"
@@ -26,3 +26,7 @@ log = "0.4"
 
 [patch.crates-io]
 rusqlite = { git = "https://github.com/ProjectAnni/rusqlite", branch = "wasm32-unknown-unknown" }
+
+[patch.'https://github.com/ProjectAnni/anni']
+anni-provider = { git = "https://github.com/snylonue/anni", branch = "priority-provider"}
+anni-flac = { git = "https://github.com/snylonue/anni", branch = "priority-provider" }
