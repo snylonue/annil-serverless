@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anni_provider::{providers::TypedPriorityProvider, AnniProvider, ProviderError};
+use anni_provider::{AnniProvider, ProviderError};
 use anni_provider_od::{
     onedrive_api::{DriveId, DriveLocation},
     ClientInfo, OneDriveClient, OneDriveProvider,
@@ -27,7 +27,7 @@ use axum::{
 use jwt_simple::prelude::HS256Key;
 use serde::Deserialize;
 use shuttle_persist::{Persist, PersistInstance};
-use shuttle_secrets::{SecretStore, Secrets};
+use shuttle_runtime::{SecretStore, Secrets};
 use tokio::{sync::RwLock, time::sleep};
 use tower::ServiceBuilder;
 use tower_http::cors::Any;
