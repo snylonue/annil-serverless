@@ -101,20 +101,22 @@ async fn aduio_raw(
 ) -> Response {
     let provider = provider.read().await;
 
-    let uri = match provider
-        .audio_url(&track.album_id.to_string(), track.disc_id, track.track_id)
-        .await
-    {
-        Ok((uri, _)) => uri,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                [(CACHE_CONTROL, "private")],
-                format!("{e:?}"),
-            )
-                .into_response()
-        }
-    };
+    // let uri = match provider
+        // .audio_url(&track.album_id.to_string(), track.disc_id, track.track_id)
+        // .await
+    // {
+        // Ok((uri, _)) => uri,
+        // Err(e) => {
+            // return (
+                // StatusCode::INTERNAL_SERVER_ERROR,
+                // [(CACHE_CONTROL, "private")],
+                // format!("{e:?}"),
+            // )
+                // .into_response()
+        // }
+    // };
+
+    let uri = format!("https://box.nju.edu.cn/d/e74361b1558249b39655/files/?p=%2F{}%2F{}%2F{}.flac&dl=1", track.album_id, track.disc_id, track.track_id);
 
     let info = match provider
         .get_audio_info(&track.album_id.to_string(), track.disc_id, track.track_id)
@@ -191,20 +193,10 @@ async fn axum(
 
     let od = Arc::new(od);
 
-    let provider = Arc::new(AnnilProvider::new(TypedPriorityProvider::new(vec![
-        (
-            1,
-            OneDriveProvider::new(Arc::clone(&od), "/anni-ws".to_owned(), 0)
-                .await
-                .unwrap(),
-        ),
-        (
-            0,
-            OneDriveProvider::new(Arc::clone(&od), "/anni-ws-lossy".to_owned(), 0)
-                .await
-                .unwrap(),
-        ),
-    ])));
+    let provider = Arc::new(AnnilProvider::new(OneDriveProvider::new(Arc::clone(&od), "/anni-ws".to_owned(), 0)
+    .await
+    .unwrap(),
+));
 
     let pd = Arc::clone(&provider);
     // todo: refresh token separately
@@ -212,40 +204,28 @@ async fn axum(
         loop {
             let expire_in = {
                 let p = pd.read().await;
-                let providers = p.providers();
 
-                let mut expire = Vec::with_capacity(providers.size_hint().0);
-
-                for provider in providers {
-                    if provider.drive.is_expired() {
-                        log::debug!("token expired, refreshing");
-                        match provider.drive.refresh().await {
-                            Ok(_) => {
-                                log::debug!("new token will expire at {}", provider.drive.expire())
-                            }
-                            Err(e) => log::error!("refresh failed: {e}"),
-                        };
-                        match persist.save(
-                            "refresh_token",
-                            ClientInfoStorage::from_client_info(
-                                &*provider.drive.client_info().await,
-                                provider.drive.expire(),
-                                token.old_token.clone(),
-                            ),
-                        ) {
-                            Ok(_) => {}
-                            Err(e) => log::error!("persist error: {e}"),
-                        };
-                    }
-                    expire.push(
-                        provider
-                            .drive
-                            .expire()
-                            .checked_sub(now().as_secs())
-                            .unwrap_or(10),
-                    );
+                if p.drive.is_expired() {
+                    log::debug!("token expired, refreshing");
+                    match p.drive.refresh().await {
+                        Ok(_) => {
+                            log::debug!("new token will expire at {}", p.drive.expire())
+                        }
+                        Err(e) => log::error!("refresh failed: {e}"),
+                    };
+                    match persist.save(
+                        "refresh_token",
+                        ClientInfoStorage::from_client_info(
+                            &*p.drive.client_info().await,
+                            p.drive.expire(),
+                            token.old_token.clone(),
+                        ),
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => log::error!("persist error: {e}"),
+                    };
                 }
-                expire.into_iter().min().unwrap()
+                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10)
             }; // `p` should get dropped here
 
             sleep(Duration::from_secs(expire_in)).await
