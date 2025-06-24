@@ -228,7 +228,7 @@ dependencies = [
 
 [[package]]
 name = "annil-serverless"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "anni-provider",
  "anni-provider-od",

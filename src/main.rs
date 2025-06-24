@@ -27,7 +27,7 @@ use axum::{
 use jwt_simple::prelude::HS256Key;
 use serde::Deserialize;
 use shuttle_runtime::{SecretStore, Secrets};
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, time::sleep};
 use tower::ServiceBuilder;
 use tower_http::cors::Any;
 
@@ -159,7 +159,31 @@ async fn axum(#[Secrets] secret_store: SecretStore) -> shuttle_axum::ShuttleAxum
             .unwrap(),
     ));
 
-    // let pd = Arc::clone(&provider);
+    let pd = Arc::clone(&provider);
+
+    tokio::spawn(async move {
+        loop {
+            let expire_in = {
+                let p = pd.read().await;
+
+                if p.drive.is_expired() {
+                    log::debug!("token expired, refreshing");
+
+                    match p.drive.refresh().await {
+                        Ok(_) => {
+                            log::debug!("new token will expire at {}", p.drive.expire())
+                        }
+
+                        Err(e) => log::error!("refresh failed: {e}"),
+                    };
+                }
+
+                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10)
+            }; // `p` should get dropped here
+
+            sleep(Duration::from_secs(expire_in)).await
+        }
+    });
 
     let annil_state = Arc::new(AnnilState {
         version: String::from(concat!("AnnilServerless v", env!("CARGO_PKG_VERSION"))),
