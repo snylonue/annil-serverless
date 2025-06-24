@@ -26,50 +26,17 @@ use axum::{
 };
 use jwt_simple::prelude::HS256Key;
 use serde::Deserialize;
-use shuttle_persist::{Persist, PersistInstance};
 use shuttle_runtime::{SecretStore, Secrets};
-use tokio::{sync::RwLock, time::sleep};
+use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::Any;
 
-#[derive(Debug, serde::Serialize)]
-struct AnnilInfo {
-    version: String,
-    protocol_version: String,
-    last_update: u64,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-struct ClientInfoStorage {
-    refresh_token: String,
-    expire: u64,
-    old_token: String,
-}
-
-impl ClientInfoStorage {
-    fn from_client_info(info: &ClientInfo, expire: u64, old_token: String) -> Self {
-        Self {
-            refresh_token: info.refresh_token.clone(),
-            expire,
-            old_token,
-        }
-    }
-
-    fn load(secret: &SecretStore, persist: &PersistInstance) -> Self {
-        let refresh_token = secret.get("od_refresh_token").unwrap();
-        match persist.load::<ClientInfoStorage>("refresh_token") {
-            Ok(info) if info.old_token == refresh_token => info,
-            _ => {
-                log::warn!("failed to load refresh token or refresh token got updated, reading from secret store");
-                Self {
-                    refresh_token: refresh_token.clone(),
-                    expire: 0,
-                    old_token: refresh_token,
-                }
-            }
-        }
-    }
-}
+// #[derive(Debug, serde::Serialize)]
+// struct AnnilInfo {
+//     version: String,
+//     protocol_version: String,
+//     last_update: u64,
+// }
 
 #[derive(Debug)]
 enum Error {
@@ -101,22 +68,20 @@ async fn aduio_raw(
 ) -> Response {
     let provider = provider.read().await;
 
-    // let uri = match provider
-        // .audio_url(&track.album_id.to_string(), track.disc_id, track.track_id)
-        // .await
-    // {
-        // Ok((uri, _)) => uri,
-        // Err(e) => {
-            // return (
-                // StatusCode::INTERNAL_SERVER_ERROR,
-                // [(CACHE_CONTROL, "private")],
-                // format!("{e:?}"),
-            // )
-                // .into_response()
-        // }
-    // };
-
-    let uri = format!("https://box.nju.edu.cn/d/e74361b1558249b39655/files/?p=%2F{}%2F{}%2F{}.flac&dl=1", track.album_id, track.disc_id, track.track_id);
+    let uri = match provider
+        .audio_url(&track.album_id.to_string(), track.disc_id, track.track_id)
+        .await
+    {
+        Ok((uri, _)) => uri,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(CACHE_CONTROL, "private")],
+                format!("{e:?}"),
+            )
+                .into_response()
+        }
+    };
 
     let info = match provider
         .get_audio_info(&track.album_id.to_string(), track.disc_id, track.track_id)
@@ -171,19 +136,14 @@ fn now() -> Duration {
 }
 
 #[shuttle_runtime::main]
-async fn axum(
-    #[Secrets] secret_store: SecretStore,
-    #[Persist] persist: PersistInstance,
-) -> shuttle_axum::ShuttleAxum {
-    let token = ClientInfoStorage::load(&secret_store, &persist);
-
+async fn axum(#[Secrets] secret_store: SecretStore) -> shuttle_axum::ShuttleAxum {
     let location = DriveLocation::from_id(DriveId(String::from(
         "b!uyGkzZXn6UeUrlI00cEEwB0U-PTBJVNIkX2vruaA2Wsnkoejm3etQpoha4pffHk9",
     )));
     let od = OneDriveClient::new(
         secret_store.get("od_client_id").unwrap(),
         ClientInfo::new(
-            token.refresh_token,
+            secret_store.get("od_refresh_token").unwrap(),
             secret_store.get("od_client_secret").unwrap(),
             location,
         ),
@@ -193,53 +153,17 @@ async fn axum(
 
     let od = Arc::new(od);
 
-    let provider = Arc::new(AnnilProvider::new(OneDriveProvider::new(Arc::clone(&od), "/anni-ws".to_owned(), 0)
-    .await
-    .unwrap(),
-));
+    let provider = Arc::new(AnnilProvider::new(
+        OneDriveProvider::new(Arc::clone(&od), "/anni-ws".to_owned(), 0)
+            .await
+            .unwrap(),
+    ));
 
-    let pd = Arc::clone(&provider);
-    // todo: refresh token separately
-    tokio::spawn(async move {
-        loop {
-            let expire_in = {
-                let p = pd.read().await;
-
-                if p.drive.is_expired() {
-                    log::debug!("token expired, refreshing");
-                    match p.drive.refresh().await {
-                        Ok(_) => {
-                            log::debug!("new token will expire at {}", p.drive.expire())
-                        }
-                        Err(e) => log::error!("refresh failed: {e}"),
-                    };
-                    match persist.save(
-                        "refresh_token",
-                        ClientInfoStorage::from_client_info(
-                            &*p.drive.client_info().await,
-                            p.drive.expire(),
-                            token.old_token.clone(),
-                        ),
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => log::error!("persist error: {e}"),
-                    };
-                }
-                p.drive.expire().checked_sub(now().as_secs()).unwrap_or(10)
-            }; // `p` should get dropped here
-
-            sleep(Duration::from_secs(expire_in)).await
-        }
-    });
+    // let pd = Arc::clone(&provider);
 
     let annil_state = Arc::new(AnnilState {
         version: String::from(concat!("AnnilServerless v", env!("CARGO_PKG_VERSION"))),
-        last_update: RwLock::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        ),
+        last_update: RwLock::new(now().as_secs()),
         etag: RwLock::new(provider.compute_etag().await.unwrap()),
         metadata: None,
     });

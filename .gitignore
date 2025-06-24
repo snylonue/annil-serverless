@@ -2,3 +2,5 @@
 token
 Secrets.toml
 /shuttle_persist
+.shuttle*
+Secrets*.toml

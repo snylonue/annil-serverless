@@ -5,20 +5,19 @@ edition = "2021"
 publish = false
 
 [dependencies]
-shuttle-axum = { version = "0.44", default-features = false, features = ["axum-0-6"] }
-shuttle-runtime = "0.44"
-shuttle-persist = "0.44"
-axum = { version = "0.6", features = ["json"] }
+shuttle-axum = { version = "0.55" }
+shuttle-runtime = "0.55"
+axum = { version = "0.8", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 anni-provider = { git = "https://github.com/ProjectAnni/anni", package = "anni-provider", default-features = false }
-anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od", rev = "38e593f" }
+anni-provider-od = { git = "https://github.com/snylonue/anni-provider-od" }
 annil = { git = "https://github.com/ProjectAnni/anni.git", package = "annil", default-features = false }
 jwt-simple = "0.11"
 uuid = { version = "1", features = ["serde"]}
 tokio = "1"
 tokio-util = { version = "0.6.10", features = ["compat", "io"] }
-tower-http = { version = "0.3", features = ["cors"]}
-tower = "0.4"
+tower-http = { version = "0.6", features = ["cors"]}
+tower = "0.5"
 anyhow = "1.0.66"
 serde_json = "1.0.89"
 log = "0.4"
