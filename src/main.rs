@@ -181,10 +181,10 @@ async fn axum(#[Secrets] secret_store: SecretStore) -> shuttle_axum::ShuttleAxum
             "/albums",
             get(annil::route::user::albums::<OneDriveProvider>),
         )
-        .route("/:album_id/cover", get(cover_raw))
-        .route("/:album_id/:disc_id/cover", get(cover_raw))
+        .route("/{album_id}/cover", get(cover_raw))
+        .route("/{album_id}/{disc_id}/cover", get(cover_raw))
         .route(
-            "/:album_id/:disc_id/:track_id",
+            "/{album_id}/{disc_id}/{track_id}",
             get(aduio_raw).head(annil::route::user::audio_head::<OneDriveProvider>),
         )
         .route(
